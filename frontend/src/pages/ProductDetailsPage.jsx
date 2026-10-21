@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getProductById, getProducts } from '../services/api';
+import { getProductById, getProducts, submitContactInquiry } from '../services/api';
 import { useBag } from '../context/BagContext';
-import PriceDisplay from '../components/common/PriceDisplay';
+import PriceDisplay, { formatINR } from '../components/common/PriceDisplay';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import ProductCard from '../components/product/ProductCard';
-import { CheckIcon, BagIcon, PhoneIcon, WhatsAppIcon } from '../components/common/Icons';
+import { CheckIcon, BagIcon, PhoneIcon, WhatsAppIcon, CloseIcon, MapPinIcon } from '../components/common/Icons';
 
 export const ProductDetailsPage = () => {
   const { id } = useParams();
@@ -24,6 +24,16 @@ export const ProductDetailsPage = () => {
   const [addedSuccess, setAddedSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+
+  // Direct "Book Now" Modal States
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingName, setBookingName] = useState('');
+  const [bookingPhone, setBookingPhone] = useState('');
+  const [bookingFulfillment, setBookingFulfillment] = useState('pickup'); // 'pickup' | 'delivery'
+  const [bookingPayment, setBookingPayment] = useState('pay_at_store');   // 'pay_at_store' | 'upi_card'
+  const [bookingErrors, setBookingErrors] = useState({});
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingSuccessData, setBookingSuccessData] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -87,6 +97,61 @@ export const ProductDetailsPage = () => {
     }
   };
 
+  const handleOpenBooking = () => {
+    if (!selectedSize) {
+      setValidationError('Please select a size before booking this piece.');
+      return;
+    }
+    if (!selectedColour) {
+      setValidationError('Please select a colour before booking this piece.');
+      return;
+    }
+    setValidationError('');
+    setBookingErrors({});
+    setBookingSuccessData(null);
+    setShowBookingModal(true);
+  };
+
+  const handleConfirmBooking = async (e) => {
+    e.preventDefault();
+    const errs = {};
+    if (!bookingName.trim() || bookingName.trim().length < 2) {
+      errs.name = 'Please enter your full name (minimum 2 characters).';
+    }
+    if (!bookingPhone.trim() || !/^[0-9]{10}$/.test(bookingPhone.replace(/[\s-]/g, ''))) {
+      errs.phone = 'Please enter a valid 10-digit mobile number.';
+    }
+    if (Object.keys(errs).length > 0) {
+      setBookingErrors(errs);
+      return;
+    }
+
+    setIsSubmittingBooking(true);
+    const refId = `MRSM-BK-${Math.floor(100000 + Math.random() * 900000)}`;
+    const lineTotal = product.price * quantity;
+
+    try {
+      await submitContactInquiry({
+        name: bookingName.trim(),
+        phone: bookingPhone.trim(),
+        subject: `Direct Booking: ${product.name} (${refId})`,
+        message: `Order Booking [${refId}]: ${product.name} | Size: ${selectedSize} | Colour: ${selectedColour.name} | Qty: ${quantity} | Total: ₹${lineTotal} | Fulfillment: ${bookingFulfillment === 'pickup' ? 'Showroom Trial & Pickup' : 'Home Delivery'} | Payment: ${bookingPayment === 'pay_at_store' ? 'Pay at Store on Pickup' : 'UPI/Online Demo'}`
+      });
+    } catch (err) {
+      console.warn('Booking notification notice:', err);
+    } finally {
+      setIsSubmittingBooking(false);
+      setBookingSuccessData({
+        refId,
+        customerName: bookingName.trim(),
+        customerPhone: bookingPhone.trim(),
+        totalAmount: lineTotal,
+        fulfillment: bookingFulfillment,
+        payment: bookingPayment
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="section" style={{ minHeight: '60vh' }}>
@@ -118,6 +183,7 @@ export const ProductDetailsPage = () => {
     : ['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=900&q=80'];
 
   const availableStock = typeof product.stock === 'number' ? product.stock : 10;
+  const currentTotal = product.price * quantity;
 
   return (
     <div className="section" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -251,7 +317,7 @@ export const ProductDetailsPage = () => {
                 size="lg"
               />
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Inclusive of all applicable taxes • Free store pickup available
+                Inclusive of all applicable taxes • Free store pickup & trial available
               </div>
             </div>
 
@@ -401,18 +467,32 @@ export const ProductDetailsPage = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '2rem' }}>
-              <Button
-                variant="primary"
-                size="lg"
-                isFullWidth
-                onClick={handleAddToBag}
-                icon={<BagIcon size={20} />}
-              >
-                {addedSuccess ? '✓ Added to Shopping Bag' : 'Add to Bag'}
-              </Button>
+            {/* Action Buttons: Add to Bag + BOOK NOW */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '2rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} className="buy-buttons-grid">
+                {/* 1. Add to Bag */}
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={handleAddToBag}
+                  icon={<BagIcon size={18} />}
+                  style={{ width: '100%' }}
+                >
+                  {addedSuccess ? '✓ In Bag' : 'Add to Bag'}
+                </Button>
 
+                {/* 2. Book Now (Direct Checkout / Clothes Booking) */}
+                <Button
+                  variant="caramel"
+                  size="lg"
+                  onClick={handleOpenBooking}
+                  style={{ width: '100%', fontWeight: '700', letterSpacing: '0.06em' }}
+                >
+                  ⚡ Book Now
+                </Button>
+              </div>
+
+              {/* Call and WhatsApp Inquiries */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <a
                   href="tel:+918466007454"
@@ -523,6 +603,400 @@ export const ProductDetailsPage = () => {
           </div>
         )}
       </div>
+
+      {/* =========================================================================
+          Direct "BOOK NOW" & Payment Simulation Modal
+          ========================================================================= */}
+      {showBookingModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 'var(--z-modal)',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem'
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--color-white)',
+              borderRadius: 'var(--radius-md)',
+              maxWidth: '560px',
+              width: '100%',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              boxShadow: 'var(--shadow-lg)',
+              position: 'relative',
+              padding: '2rem'
+            }}
+          >
+            {/* Modal Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowBookingModal(false)}
+              aria-label="Close booking modal"
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                color: 'var(--text-muted)',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <CloseIcon size={22} />
+            </button>
+
+            {!bookingSuccessData ? (
+              /* Booking Form View */
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span className="badge badge-caramel">Instant Reservation</span>
+                </div>
+
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', color: 'var(--color-espresso)', marginBottom: '4px' }}>
+                  Book & Reserve Garment
+                </h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                  Reserve your size and trial directly at <strong>MR SM Multi Brand Store (Hanamkonda)</strong>.
+                </p>
+
+                {/* Selected Item Summary Card */}
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-latte-soft)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '1rem',
+                    display: 'flex',
+                    gap: '14px',
+                    alignItems: 'center',
+                    marginBottom: '1.5rem'
+                  }}
+                >
+                  <img
+                    src={images[0]}
+                    alt={product.name}
+                    style={{ width: '64px', height: '76px', objectFit: 'cover', borderRadius: 'var(--radius-xs)' }}
+                  />
+                  <div style={{ flexGrow: 1 }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--color-espresso)', marginBottom: '4px' }}>
+                      {product.name}
+                    </div>
+                    <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <span>Size: <strong>{selectedSize}</strong></span>
+                      <span>•</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Colour:
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: selectedColour?.hex || '#000', display: 'inline-block' }} />
+                        <strong>{selectedColour?.name}</strong>
+                      </span>
+                      <span>•</span>
+                      <span>Qty: <strong>{quantity}</strong></span>
+                    </div>
+                    <div style={{ marginTop: '6px', fontSize: '0.95rem', fontWeight: '800', color: 'var(--color-espresso)' }}>
+                      Total Amount: {formatINR(currentTotal)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Form */}
+                <form onSubmit={handleConfirmBooking} noValidate>
+                  {/* Customer Full Name */}
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" htmlFor="booking-name">
+                      Your Full Name <span style={{ color: 'var(--status-error)' }}>*</span>
+                    </label>
+                    <input
+                      id="booking-name"
+                      type="text"
+                      className="form-input"
+                      value={bookingName}
+                      onChange={(e) => setBookingName(e.target.value)}
+                      placeholder="e.g. Ramesh Kumar"
+                    />
+                    {bookingErrors.name && <div className="form-error">{bookingErrors.name}</div>}
+                  </div>
+
+                  {/* Customer Phone */}
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" htmlFor="booking-phone">
+                      Mobile Number (10 digits) <span style={{ color: 'var(--status-error)' }}>*</span>
+                    </label>
+                    <input
+                      id="booking-phone"
+                      type="tel"
+                      className="form-input"
+                      value={bookingPhone}
+                      onChange={(e) => setBookingPhone(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                    />
+                    {bookingErrors.phone && <div className="form-error">{bookingErrors.phone}</div>}
+                  </div>
+
+                  {/* Fulfillment Option */}
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label">
+                      Fulfillment Method
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <label
+                        style={{
+                          padding: '10px 12px',
+                          border: bookingFulfillment === 'pickup' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: bookingFulfillment === 'pickup' ? 'var(--color-latte-soft)' : 'var(--color-white)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="fulfillment"
+                          checked={bookingFulfillment === 'pickup'}
+                          onChange={() => setBookingFulfillment('pickup')}
+                        />
+                        <div>
+                          <strong>Showroom Trial & Pickup</strong>
+                          <div style={{ fontSize: '0.75rem', color: '#2E6F40', fontWeight: '700' }}>FREE</div>
+                        </div>
+                      </label>
+
+                      <label
+                        style={{
+                          padding: '10px 12px',
+                          border: bookingFulfillment === 'delivery' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: bookingFulfillment === 'delivery' ? 'var(--color-latte-soft)' : 'var(--color-white)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="fulfillment"
+                          checked={bookingFulfillment === 'delivery'}
+                          onChange={() => setBookingFulfillment('delivery')}
+                        />
+                        <div>
+                          <strong>Home Delivery</strong>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Warangal / Hanamkonda</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Payment Method Option */}
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                    <label className="form-label">
+                      Payment Preference
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <label
+                        style={{
+                          padding: '10px 12px',
+                          border: bookingPayment === 'pay_at_store' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: bookingPayment === 'pay_at_store' ? 'var(--color-latte-soft)' : 'var(--color-white)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          checked={bookingPayment === 'pay_at_store'}
+                          onChange={() => setBookingPayment('pay_at_store')}
+                        />
+                        <div>
+                          <strong>Pay at Store on Pickup</strong>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cash / UPI / GPay</div>
+                        </div>
+                      </label>
+
+                      <label
+                        style={{
+                          padding: '10px 12px',
+                          border: bookingPayment === 'upi_card' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: bookingPayment === 'upi_card' ? 'var(--color-latte-soft)' : 'var(--color-white)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          checked={bookingPayment === 'upi_card'}
+                          onChange={() => setBookingPayment('upi_card')}
+                        />
+                        <div>
+                          <strong>Simulated Online Pay</strong>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Demo Simulation</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Demo Disclaimer notice */}
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--color-mocha)',
+                      backgroundColor: 'rgba(196, 138, 90, 0.12)',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--radius-xs)',
+                      marginBottom: '1.25rem'
+                    }}
+                  >
+                    💡 <strong>Demo Reservation:</strong> This reserves your clothing piece at MR SM Multi Brand Store. No actual credit card charge is processed in demo mode.
+                  </div>
+
+                  {/* Buttons */}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <Button
+                      type="submit"
+                      variant="caramel"
+                      size="lg"
+                      isFullWidth
+                      isLoading={isSubmittingBooking}
+                    >
+                      Confirm Booking ({formatINR(currentTotal)})
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setShowBookingModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              /* Booking Success Confirmation View */
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--status-success-bg)',
+                    color: 'var(--status-success)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <CheckIcon size={32} />
+                </div>
+
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', color: 'var(--color-espresso)', marginBottom: '6px' }}>
+                  Garment Reserved Successfully!
+                </h2>
+
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+                  Your clothing reservation has been registered with MR SM Multi Brand Store.
+                </p>
+
+                {/* Booking ID Chip */}
+                <div
+                  style={{
+                    display: 'inline-block',
+                    backgroundColor: 'var(--color-latte-soft)',
+                    border: '1px dashed var(--color-caramel)',
+                    padding: '8px 18px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '1.05rem',
+                    fontWeight: '800',
+                    color: 'var(--color-espresso)',
+                    letterSpacing: '0.08em',
+                    marginBottom: '1.5rem'
+                  }}
+                >
+                  Booking ID: {bookingSuccessData.refId}
+                </div>
+
+                {/* Booking Details Card */}
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-white)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '1.25rem',
+                    textAlign: 'left',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    marginBottom: '1.5rem'
+                  }}
+                >
+                  <div><strong>Garment:</strong> {product.name} ({selectedSize}, {selectedColour?.name})</div>
+                  <div><strong>Quantity:</strong> {quantity} item(s)</div>
+                  <div><strong>Total to Pay:</strong> <strong style={{ color: 'var(--color-espresso)', fontSize: '1.05rem' }}>{formatINR(bookingSuccessData.totalAmount)}</strong></div>
+                  <div><strong>Customer:</strong> {bookingSuccessData.customerName} ({bookingSuccessData.customerPhone})</div>
+                  <div>
+                    <strong>Pickup Showroom:</strong> 1st Floor, Opp. Royal Enfield Showroom, Beside A to Z Medicals, Subedari, Hanamkonda
+                  </div>
+                </div>
+
+                {/* WhatsApp Direct Action Button */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <a
+                    href={`https://wa.me/918332867454?text=${encodeURIComponent(`Hi Mr. Shiva Yadav, I have booked "${product.name}" (Size: ${selectedSize}, Colour: ${selectedColour?.name}, Qty: ${quantity}, Total: ${formatINR(bookingSuccessData.totalAmount)}). Booking ID: ${bookingSuccessData.refId}. My Name: ${bookingSuccessData.customerName}, Phone: ${bookingSuccessData.customerPhone}. Please hold this for my showroom trial.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-caramel btn-lg"
+                    style={{ width: '100%', gap: '8px', fontWeight: '700' }}
+                  >
+                    <WhatsAppIcon size={20} /> Send Booking to WhatsApp (Mr. Shiva Yadav)
+                  </a>
+
+                  <Button
+                    variant="primary"
+                    size="md"
+                    isFullWidth
+                    onClick={() => {
+                      setShowBookingModal(false);
+                      setBookingSuccessData(null);
+                    }}
+                  >
+                    Done & Continue Browsing
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @media (max-width: 640px) {
+          .buy-buttons-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
