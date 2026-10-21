@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 // Route Handlers
 const healthRoutes = require('./routes/healthRoutes');
@@ -41,8 +42,17 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/contact', contactRoutes);
 
-// Catch 404 for unhandled API routes
-app.use(notFoundHandler);
+// Static Frontend Build Serving (Unified Production Deployment)
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDistPath));
+
+// Catch 404 for unmatched /api routes
+app.use('/api', notFoundHandler);
+
+// Single Page Application (SPA) fallback to index.html for all client pages
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendDistPath, 'index.html'));
+});
 
 // Centralized error middleware
 app.use(errorHandler);

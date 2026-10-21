@@ -4,9 +4,10 @@
   "description": "MR SM Multi Brand Store - MERN Stack Monorepo (Webpack 5 + React 18, Express, MongoDB)",
   "private": true,
   "scripts": {
+    "start": "node backend/server.js",
+    "build": "npm run build --prefix frontend",
     "client": "npm start --prefix frontend",
     "server": "npm start --prefix backend",
-    "build": "npm run build --prefix frontend",
     "test:api": "node backend/test-api.js",
     "seed": "npm run seed --prefix backend"
   }
