@@ -11,7 +11,8 @@ export const MobileNav = ({ isOpen, onClose }) => {
         position: 'fixed',
         inset: 0,
         zIndex: 'var(--z-drawer)',
-        display: 'flex'
+        display: 'flex',
+        justifyContent: 'flex-end'
       }}
     >
       {/* Backdrop */}
@@ -21,7 +22,8 @@ export const MobileNav = ({ isOpen, onClose }) => {
           position: 'fixed',
           inset: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(3px)'
+          backdropFilter: 'blur(3px)',
+          animation: 'fadeInBackdrop 0.2s ease-out'
         }}
       />
 
@@ -30,7 +32,7 @@ export const MobileNav = ({ isOpen, onClose }) => {
         style={{
           position: 'relative',
           width: '85%',
-          maxWidth: '360px',
+          maxWidth: '340px',
           height: '100%',
           backgroundColor: 'var(--color-espresso)',
           color: 'var(--color-cream)',
@@ -38,7 +40,8 @@ export const MobileNav = ({ isOpen, onClose }) => {
           flexDirection: 'column',
           boxShadow: 'var(--shadow-lg)',
           overflowY: 'auto',
-          zIndex: 10
+          zIndex: 10,
+          animation: 'slideInFromRight 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
         {/* Drawer Header */}
@@ -65,23 +68,23 @@ export const MobileNav = ({ isOpen, onClose }) => {
           <button
             onClick={onClose}
             aria-label="Close menu"
-            style={{ color: 'var(--color-cream)', padding: '4px' }}
+            style={{ color: 'var(--color-cream)', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
           >
-            <CloseIcon size={24} />
+            <CloseIcon size={22} />
           </button>
         </div>
 
-        {/* Navigation Links */}
-        <nav style={{ padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {/* Top Features Navigation Links (Stored in Mobile Menu) */}
+        <nav style={{ padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
           {[
-            { label: 'Home', path: '/' },
-            { label: 'Shop Catalogue', path: '/shop' },
-            { label: 'New Arrivals', path: '/new-arrivals' },
-            { label: 'Exclusive Offers', path: '/offers' },
-            { label: 'Shopping Bag', path: '/bag' },
-            { label: '📦 My Orders', path: '/my-orders' },
-            { label: 'About Store', path: '/about' },
-            { label: 'Contact & Location', path: '/contact' }
+            { label: 'Home', path: '/', icon: '🏠' },
+            { label: 'Shop Catalogue', path: '/shop', icon: '👔' },
+            { label: 'New Arrivals', path: '/new-arrivals', icon: '✨' },
+            { label: 'Exclusive Offers', path: '/offers', icon: '🏷️' },
+            { label: 'Shopping Bag', path: '/bag', icon: '👜' },
+            { label: 'My Orders', path: '/my-orders', icon: '📦' },
+            { label: 'About Store', path: '/about', icon: '🏛️' },
+            { label: 'Contact & Location', path: '/contact', icon: '📍' }
           ].map((item) => (
             <NavLink
               key={item.path}
@@ -89,9 +92,9 @@ export const MobileNav = ({ isOpen, onClose }) => {
               onClick={onClose}
               end={item.path === '/'}
               style={({ isActive }) => ({
-                padding: '0.75rem 1rem',
+                padding: '0.8rem 1rem',
                 borderRadius: 'var(--radius-sm)',
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 fontWeight: isActive ? '700' : '500',
                 color: isActive ? 'var(--color-espresso)' : 'var(--color-cream)',
                 backgroundColor: isActive ? 'var(--color-latte)' : 'transparent',
@@ -101,7 +104,10 @@ export const MobileNav = ({ isOpen, onClose }) => {
                 transition: 'all var(--transition-fast)'
               })}
             >
-              <span>{item.label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.05rem' }}>{item.icon}</span>
+                <span>{item.label}</span>
+              </div>
               <span style={{ fontSize: '1.1rem', opacity: 0.6 }}>›</span>
             </NavLink>
           ))}
@@ -154,6 +160,25 @@ export const MobileNav = ({ isOpen, onClose }) => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes slideInFromRight {
+          from {
+            transform: translateX(100%);
+          }
+          to {
+            transform: translateX(0);
+          }
+        }
+        @keyframes fadeInBackdrop {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };

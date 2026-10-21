@@ -151,7 +151,7 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
             className="bag-button"
           >
             <BagIcon size={20} />
-            <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>Bag</span>
+            <span className="bag-label" style={{ fontSize: '0.85rem', fontWeight: '600' }}>Bag</span>
             <span
               style={{
                 backgroundColor: 'var(--color-caramel)',
@@ -167,7 +167,7 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
             </span>
           </Link>
 
-          {/* Mobile Hamburger Toggle Button */}
+          {/* Mobile Navigation Toggle Button (Auto-adjusts & stores menu links on mobile) */}
           <button
             type="button"
             onClick={onToggleMobileNav}
@@ -175,19 +175,38 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
             className="mobile-nav-toggle"
             style={{
               display: 'none',
-              padding: '6px',
-              color: 'var(--color-cream)',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(196, 138, 90, 0.16)',
+              border: '1px solid var(--color-caramel)',
+              padding: '0.45rem 0.75rem',
               borderRadius: 'var(--radius-sm)',
-              border: '1px solid rgba(231, 214, 193, 0.2)'
+              color: 'var(--color-cream)',
+              cursor: 'pointer',
+              fontSize: '0.825rem',
+              fontWeight: '600',
+              transition: 'all var(--transition-fast)'
             }}
           >
-            {isMobileNavOpen ? <CloseIcon size={24} /> : <MenuIcon size={24} />}
+            {isMobileNavOpen ? <CloseIcon size={20} /> : <MenuIcon size={20} />}
+            <span className="menu-btn-text">Menu</span>
           </button>
         </div>
       </div>
 
       <style>{`
-        @media (max-width: 900px) {
+        /* Desktop & Laptop Browsers: Keep exact horizontal top navigation */
+        @media (min-width: 1025px) {
+          .desktop-nav {
+            display: flex !important;
+          }
+          .mobile-nav-toggle {
+            display: none !important;
+          }
+        }
+
+        /* Mobile & Tablet Browsers: Store top features inside the Menu icon */
+        @media (max-width: 1024px) {
           .desktop-nav {
             display: none !important;
           }
@@ -195,13 +214,22 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
             display: inline-flex !important;
           }
         }
+
+        /* Small Mobile Devices: Compact action buttons for razor-sharp alignment */
         @media (max-width: 540px) {
-          .orders-label {
+          .orders-label,
+          .bag-label {
             display: none !important;
           }
           .brand-subtitle {
             font-size: 0.58rem !important;
             letter-spacing: 0.08em !important;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .menu-btn-text {
+            display: none !important;
           }
         }
       `}</style>
