@@ -80,6 +80,7 @@ export const MobileNav = ({ isOpen, onClose }) => {
             { label: 'Exclusive Offers', path: '/offers' },
             { label: 'Shopping Bag', path: '/bag' },
             { label: '📦 My Orders', path: '/my-orders' },
+            { label: '⚙️ Admin Portal', path: '/admin' },
             { label: 'About Store', path: '/about' },
             { label: 'Contact & Location', path: '/contact' }
           ].map((item) => (

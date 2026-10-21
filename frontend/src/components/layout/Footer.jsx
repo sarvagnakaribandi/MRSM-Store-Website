@@ -89,7 +89,8 @@ export const Footer = () => {
                 { label: 'Seasonal Offers', path: '/offers' },
                 { label: 'Track My Orders', path: '/my-orders' },
                 { label: 'About MR SM', path: '/about' },
-                { label: 'Store Visit & Contact', path: '/contact' }
+                { label: 'Store Visit & Contact', path: '/contact' },
+                { label: '🔐 Owner Admin Portal', path: '/admin' }
               ].map((link) => (
                 <li key={link.path}>
                   <Link

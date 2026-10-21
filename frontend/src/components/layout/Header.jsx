@@ -107,7 +107,30 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
         </nav>
 
         {/* Header Right Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          {/* Admin Portal Button */}
+          <Link
+            to="/admin"
+            aria-label="Admin Portal"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              backgroundColor: 'rgba(196, 138, 90, 0.18)',
+              border: '1px solid var(--color-caramel)',
+              padding: '0.45rem 0.75rem',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--color-cream)',
+              textDecoration: 'none',
+              fontSize: '0.825rem',
+              fontWeight: '700',
+              transition: 'all var(--transition-fast)'
+            }}
+          >
+            <span>⚙️</span>
+            <span>Admin</span>
+          </Link>
+
           {/* My Orders Button */}
           <Link
             to="/my-orders"

@@ -163,3 +163,69 @@ export async function checkHealth() {
   const result = await fetchApi('/health');
   return result || { success: false, status: 'offline' };
 }
+
+/**
+ * Admin: Create a new product
+ */
+export async function createProduct(productData) {
+  const result = await fetchApi('/products', {
+    method: 'POST',
+    body: JSON.stringify(productData)
+  });
+
+  if (result && result.success) {
+    return result.data;
+  }
+
+  // Client-side fallback: add to memory / local store
+  const newProduct = {
+    _id: `prod_local_${Date.now()}`,
+    ...productData,
+    createdAt: new Date().toISOString()
+  };
+  SAMPLE_PRODUCTS.unshift(newProduct);
+  return newProduct;
+}
+
+/**
+ * Admin: Update an existing product
+ */
+export async function updateProduct(id, productData) {
+  const result = await fetchApi(`/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(productData)
+  });
+
+  if (result && result.success) {
+    return result.data;
+  }
+
+  // Client fallback
+  const idx = SAMPLE_PRODUCTS.findIndex((p) => p._id === id || p.slug === id);
+  if (idx !== -1) {
+    SAMPLE_PRODUCTS[idx] = { ...SAMPLE_PRODUCTS[idx], ...productData };
+    return SAMPLE_PRODUCTS[idx];
+  }
+  return productData;
+}
+
+/**
+ * Admin: Delete a product
+ */
+export async function deleteProduct(id) {
+  const result = await fetchApi(`/products/${id}`, {
+    method: 'DELETE'
+  });
+
+  if (result && result.success) {
+    return true;
+  }
+
+  // Client fallback
+  const idx = SAMPLE_PRODUCTS.findIndex((p) => p._id === id || p.slug === id);
+  if (idx !== -1) {
+    SAMPLE_PRODUCTS.splice(idx, 1);
+  }
+  return true;
+}
+
