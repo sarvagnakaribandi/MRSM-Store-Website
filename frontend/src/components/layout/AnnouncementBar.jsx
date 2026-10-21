@@ -4,6 +4,7 @@ import { PhoneIcon, WhatsAppIcon, MapPinIcon } from '../common/Icons';
 export const AnnouncementBar = () => {
   return (
     <div
+      className="announcement-bar-wrap"
       style={{
         backgroundColor: 'var(--color-espresso-dark)',
         color: 'var(--color-latte)',
@@ -19,7 +20,7 @@ export const AnnouncementBar = () => {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-          <MapPinIcon size={14} /> Subedari, Hanamkonda, Warangal
+          <MapPinIcon size={14} /> Subedari, Hanamkonda
         </span>
         <a
           href="tel:+918466007454"
@@ -47,7 +48,7 @@ export const AnnouncementBar = () => {
         </a>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="announcement-review-note" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span
           style={{
             backgroundColor: 'var(--color-caramel)',
@@ -66,6 +67,17 @@ export const AnnouncementBar = () => {
           Presentation Storefront for Client Review
         </span>
       </div>
+
+      <style>{`
+        @media (max-width: 680px) {
+          .announcement-review-note {
+            display: none !important;
+          }
+          .announcement-bar-wrap {
+            justify-content: center !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

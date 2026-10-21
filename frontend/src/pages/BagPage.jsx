@@ -71,15 +71,7 @@ export const BagPage = () => {
         </div>
 
         {/* Two-Column Grid: Bag Items vs Order Summary */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            gap: '2.5rem',
-            alignItems: 'start'
-          }}
-          className="bag-layout-grid"
-        >
+        <div className="responsive-split-grid bag-layout-grid">
           {/* Left: Items List */}
           <div style={{ flex: '1 1 60%' }}>
             {items.map((item) => (

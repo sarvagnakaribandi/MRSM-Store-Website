@@ -33,15 +33,15 @@
 
 /* Primary Button (Espresso with Cream text) */
 .btn-primary {
-  background-color: var(--color-espresso);
-  color: var(--color-cream);
-  border-color: var(--color-espresso);
+  background-color: var(--color-espresso) !important;
+  color: var(--color-cream) !important;
+  border-color: var(--color-espresso) !important;
 }
 
 .btn-primary:hover {
-  background-color: var(--color-espresso-light);
-  border-color: var(--color-espresso-light);
-  color: var(--color-white);
+  background-color: var(--color-espresso-light) !important;
+  border-color: var(--color-espresso-light) !important;
+  color: var(--color-white) !important;
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
@@ -52,54 +52,55 @@
 
 /* Secondary Button (Mocha) */
 .btn-secondary {
-  background-color: var(--color-mocha);
-  color: var(--color-white);
-  border-color: var(--color-mocha);
+  background-color: var(--color-mocha) !important;
+  color: var(--color-white) !important;
+  border-color: var(--color-mocha) !important;
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-mocha-dark);
-  border-color: var(--color-mocha-dark);
+  background-color: var(--color-mocha-dark) !important;
+  border-color: var(--color-mocha-dark) !important;
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 /* Accent Button (Caramel) */
 .btn-caramel {
-  background-color: var(--color-caramel);
-  color: var(--color-white);
-  border-color: var(--color-caramel);
+  background-color: var(--color-caramel) !important;
+  color: var(--color-white) !important;
+  border-color: var(--color-caramel) !important;
 }
 
 .btn-caramel:hover {
-  background-color: var(--color-caramel-hover);
-  border-color: var(--color-caramel-hover);
+  background-color: var(--color-caramel-hover) !important;
+  border-color: var(--color-caramel-hover) !important;
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 /* Outline Button */
 .btn-outline {
-  background-color: transparent;
-  color: var(--color-espresso);
-  border-color: var(--color-espresso);
+  background-color: transparent !important;
+  color: var(--color-espresso) !important;
+  border-color: var(--color-espresso) !important;
 }
 
 .btn-outline:hover {
-  background-color: var(--color-espresso);
-  color: var(--color-cream);
+  background-color: var(--color-espresso) !important;
+  color: var(--color-cream) !important;
   box-shadow: var(--shadow-sm);
 }
 
 .btn-outline-caramel {
-  background-color: transparent;
-  color: var(--color-caramel);
-  border-color: var(--color-caramel);
+  background-color: transparent !important;
+  color: var(--color-caramel) !important;
+  border-color: var(--color-caramel) !important;
 }
 
 .btn-outline-caramel:hover {
-  background-color: var(--color-caramel);
-  color: var(--color-white);
+  background-color: var(--color-caramel) !important;
+  color: var(--color-white) !important;
+  box-shadow: var(--shadow-sm);
 }
 
 /* Size Modifiers */
@@ -235,6 +236,7 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  height: 2.85em;
 }
 
 .product-card-title a:hover {
@@ -389,4 +391,9 @@
 
 .demo-banner strong {
   color: var(--color-mocha);
+}
+
+/* Modal Responsive Padding */
+.checkout-modal-body {
+  padding: clamp(1rem, 3.5vw, 2rem);
 }

@@ -303,7 +303,7 @@ export const CheckoutModal = ({
             STEP 1: DELIVERY LOCATION / RECEIVER ADDRESS
             ========================================================================= */}
         {currentStep === 'address' && (
-          <div style={{ padding: '2rem' }}>
+          <div className="checkout-modal-body">
             <h2
               style={{
                 fontFamily: 'var(--font-serif)',
@@ -1238,7 +1238,7 @@ export const CheckoutModal = ({
             STEP 5: ORDER PLACED SUCCESSFUL CARD & BACK TO HOME
             ========================================================================= */}
         {currentStep === 'order_success' && orderData && (
-          <div style={{ padding: '2.5rem 2rem', textAlign: 'center' }}>
+          <div className="checkout-modal-body" style={{ textAlign: 'center' }}>
             {/* Celebratory Check Icon */}
             <div
               style={{

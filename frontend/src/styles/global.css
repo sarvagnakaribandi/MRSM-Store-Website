@@ -27,23 +27,39 @@ p:last-child {
   margin-bottom: 0;
 }
 
-/* Layout Containers */
+/* Base Body & Layout Safeguards */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw;
+}
+
+a {
+  color: inherit;
+  text-decoration: none !important;
+}
+
+a:hover {
+  color: var(--color-caramel);
+  text-decoration: none !important;
+}
+
+/* Layout Containers with Responsive Auto-Padding */
 .container {
   width: 100%;
-  max-width: var(--container-max-width);
+  max-width: var(--container-max-width) !important;
   margin-left: auto;
   margin-right: auto;
-  padding-left: var(--container-padding);
-  padding-right: var(--container-padding);
+  padding-left: clamp(1rem, 3.5vw, var(--container-padding)) !important;
+  padding-right: clamp(1rem, 3.5vw, var(--container-padding)) !important;
 }
 
 .container-narrow {
   width: 100%;
-  max-width: var(--container-narrow-width);
+  max-width: var(--container-narrow-width) !important;
   margin-left: auto;
   margin-right: auto;
-  padding-left: var(--container-padding);
-  padding-right: var(--container-padding);
+  padding-left: clamp(1rem, 3.5vw, var(--container-padding)) !important;
+  padding-right: clamp(1rem, 3.5vw, var(--container-padding)) !important;
 }
 
 /* Page Section Wrappers */
@@ -106,41 +122,74 @@ p:last-child {
   color: var(--text-muted);
 }
 
-/* Grids */
+/* Responsive Grids */
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-xl);
 }
 
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-xl);
 }
 
 .grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-lg);
 }
 
 @media (max-width: 1024px) {
   .grid-4 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
   }
   .grid-3 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
   }
 }
 
 @media (max-width: 640px) {
   .grid-4, .grid-3, .grid-2 {
-    grid-template-columns: 1fr;
-    gap: var(--space-md);
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    gap: var(--space-md) !important;
   }
   .section {
-    padding-top: var(--space-2xl);
-    padding-bottom: var(--space-2xl);
+    padding-top: var(--space-xl) !important;
+    padding-bottom: var(--space-xl) !important;
+  }
+}
+
+/* Global 2-Column Responsive Layout for Split Pages */
+.responsive-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .responsive-split-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+}
+
+/* Product Details Page Split Grid */
+.product-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 3.5rem;
+  margin-bottom: 4rem;
+}
+
+@media (max-width: 900px) {
+  .product-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+    margin-bottom: 2.5rem !important;
   }
 }

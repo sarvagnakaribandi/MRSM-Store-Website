@@ -430,7 +430,7 @@ export const MyOrdersPage = () => {
                     padding: '1.5rem 1.75rem',
                     backgroundColor: 'var(--color-cream)',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
                     gap: '1.5rem',
                     fontSize: '0.85rem'
                   }}

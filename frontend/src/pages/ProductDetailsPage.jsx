@@ -179,14 +179,7 @@ export const ProductDetailsPage = () => {
         </nav>
 
         {/* Product Details Grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-            gap: '3.5rem',
-            marginBottom: '4rem'
-          }}
-        >
+        <div className="product-details-grid">
           {/* Left: Product Images Gallery */}
           <div>
             {/* Main Active Image */}
@@ -525,7 +518,7 @@ export const ProductDetailsPage = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
               gap: '1.5rem',
               paddingTop: '1.5rem',
               borderTop: '1px solid var(--border-subtle)'

@@ -71,14 +71,7 @@ export const ContactPage = () => {
         </div>
 
         {/* Two Columns: Store Details & Map Info vs Contact Form */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            gap: '3rem',
-            alignItems: 'start'
-          }}
-        >
+        <div className="responsive-split-grid">
           {/* Left: Verified Store Info */}
           <div>
             <div

@@ -53,6 +53,7 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
               MR SM
             </span>
             <span
+              className="brand-subtitle"
               style={{
                 fontFamily: 'var(--font-sans)',
                 fontSize: '0.65rem',
@@ -107,30 +108,7 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
         </nav>
 
         {/* Header Right Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          {/* Admin Portal Button */}
-          <Link
-            to="/admin"
-            aria-label="Admin Portal"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              backgroundColor: 'rgba(196, 138, 90, 0.18)',
-              border: '1px solid var(--color-caramel)',
-              padding: '0.45rem 0.75rem',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--color-cream)',
-              textDecoration: 'none',
-              fontSize: '0.825rem',
-              fontWeight: '700',
-              transition: 'all var(--transition-fast)'
-            }}
-          >
-            <span>⚙️</span>
-            <span>Admin</span>
-          </Link>
-
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
           {/* My Orders Button */}
           <Link
             to="/my-orders"
@@ -215,6 +193,15 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
           }
           .mobile-nav-toggle {
             display: inline-flex !important;
+          }
+        }
+        @media (max-width: 540px) {
+          .orders-label {
+            display: none !important;
+          }
+          .brand-subtitle {
+            font-size: 0.58rem !important;
+            letter-spacing: 0.08em !important;
           }
         }
       `}</style>

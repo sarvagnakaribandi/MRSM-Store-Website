@@ -284,14 +284,7 @@ export const HomePage = () => {
       {/* 6. Store Introduction & Verified Location */}
       <section className="section section-latte">
         <div className="container">
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: '3rem',
-              alignItems: 'center'
-            }}
-          >
+          <div className="responsive-split-grid" style={{ alignItems: 'center' }}>
             <div>
               <span className="section-eyebrow">Local Heritage & Quality</span>
               <h2 style={{ marginBottom: '1.25rem' }}>Welcome to MR SM Multi Brand Store</h2>

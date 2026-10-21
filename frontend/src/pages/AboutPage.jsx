@@ -19,15 +19,7 @@ export const AboutPage = () => {
         </div>
 
         {/* Feature Story Section */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '3rem',
-            alignItems: 'center',
-            marginBottom: '4rem'
-          }}
-        >
+        <div className="responsive-split-grid" style={{ alignItems: 'center', marginBottom: '4rem' }}>
           <div
             style={{
               borderRadius: 'var(--radius-md)',
