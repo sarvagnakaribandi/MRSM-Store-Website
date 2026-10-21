@@ -81,6 +81,7 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
             { label: 'Shop', path: '/shop' },
             { label: 'New Arrivals', path: '/new-arrivals' },
             { label: 'Offers', path: '/offers' },
+            { label: 'My Orders', path: '/my-orders' },
             { label: 'About', path: '/about' },
             { label: 'Contact', path: '/contact' }
           ].map((item) => (
@@ -106,7 +107,30 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
         </nav>
 
         {/* Header Right Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* My Orders Button */}
+          <Link
+            to="/my-orders"
+            aria-label="View My Orders"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(231, 214, 193, 0.1)',
+              border: '1px solid rgba(231, 214, 193, 0.25)',
+              padding: '0.5rem 0.85rem',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--color-cream)',
+              textDecoration: 'none',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              transition: 'all var(--transition-fast)'
+            }}
+          >
+            <span>📦</span>
+            <span className="orders-label">Orders</span>
+          </Link>
+
           {/* Shopping Bag Button */}
           <Link
             to="/bag"

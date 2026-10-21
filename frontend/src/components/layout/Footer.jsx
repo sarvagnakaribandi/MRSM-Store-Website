@@ -87,6 +87,7 @@ export const Footer = () => {
                 { label: 'All Collections', path: '/shop' },
                 { label: 'New Arrivals', path: '/new-arrivals' },
                 { label: 'Seasonal Offers', path: '/offers' },
+                { label: 'Track My Orders', path: '/my-orders' },
                 { label: 'About MR SM', path: '/about' },
                 { label: 'Store Visit & Contact', path: '/contact' }
               ].map((link) => (

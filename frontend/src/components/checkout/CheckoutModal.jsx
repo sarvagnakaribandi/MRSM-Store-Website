@@ -200,6 +200,17 @@ export const CheckoutModal = ({
     };
   };
 
+  // Helper to persist placed orders to localStorage for "My Orders" template
+  const saveOrderToHistory = (order) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('mrsm_orders') || '[]');
+      const updated = [order, ...existing];
+      localStorage.setItem('mrsm_orders', JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Could not save order to localStorage:', err);
+    }
+  };
+
   // Handle Payment Method Step submission
   const handleProceedFromPaymentMethod = () => {
     if (paymentMethod === 'online') {
@@ -208,6 +219,7 @@ export const CheckoutModal = ({
     } else {
       // COD / Store Pickup: directly places order
       const finalOrder = buildOrderRecord(false);
+      saveOrderToHistory(finalOrder);
       setOrderData(finalOrder);
       if (onOrderSuccess) onOrderSuccess(finalOrder);
       setCurrentStep('order_success');
@@ -225,6 +237,7 @@ export const CheckoutModal = ({
     setTimeout(() => {
       setIsVerifyingPayment(false);
       const finalOrder = buildOrderRecord(true, generatedTxn);
+      saveOrderToHistory(finalOrder);
       setOrderData(finalOrder);
       if (onOrderSuccess) onOrderSuccess(finalOrder);
 
@@ -1332,7 +1345,7 @@ export const CheckoutModal = ({
               </div>
             </div>
 
-            {/* WhatsApp & Back to Home Actions */}
+            {/* WhatsApp & View Orders & Back to Home Actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <a
                 href={`https://wa.me/918332867454?text=${encodeURIComponent(
@@ -1345,6 +1358,20 @@ export const CheckoutModal = ({
               >
                 <WhatsAppIcon size={20} /> Send Order to WhatsApp (Mr. Shiva Yadav)
               </a>
+
+              {/* View in My Orders Button */}
+              <Button
+                variant="outline"
+                size="lg"
+                isFullWidth
+                onClick={() => {
+                  onClose();
+                  navigate('/my-orders');
+                }}
+                style={{ fontWeight: '700', backgroundColor: 'var(--color-latte-soft)', color: 'var(--color-espresso)' }}
+              >
+                📦 View in My Orders
+              </Button>
 
               {/* Prominent Back to Home Button (As requested by user) */}
               <Button

@@ -7,6 +7,7 @@ import ProductDetailsPage from '../pages/ProductDetailsPage';
 import NewArrivalsPage from '../pages/NewArrivalsPage';
 import OffersPage from '../pages/OffersPage';
 import BagPage from '../pages/BagPage';
+import MyOrdersPage from '../pages/MyOrdersPage';
 import AboutPage from '../pages/AboutPage';
 import ContactPage from '../pages/ContactPage';
 import NotFoundPage from '../pages/NotFoundPage';
@@ -21,6 +22,7 @@ export const AppRoutes = () => {
         <Route path="/new-arrivals" element={<NewArrivalsPage />} />
         <Route path="/offers" element={<OffersPage />} />
         <Route path="/bag" element={<BagPage />} />
+        <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<NotFoundPage />} />
