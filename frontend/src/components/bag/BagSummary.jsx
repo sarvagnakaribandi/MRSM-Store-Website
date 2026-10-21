@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { formatINR } from '../common/PriceDisplay';
 import Button from '../common/Button';
-import { PhoneIcon, WhatsAppIcon, CheckIcon } from '../common/Icons';
+import { PhoneIcon, WhatsAppIcon } from '../common/Icons';
+import CheckoutModal from '../checkout/CheckoutModal';
 
 export const BagSummary = ({
+  items = [],
   totalItems,
   subtotal,
   totalSavings,
@@ -97,9 +99,9 @@ export const BagSummary = ({
         size="lg"
         onClick={() => setShowCheckoutModal(true)}
         disabled={totalItems === 0}
-        style={{ marginBottom: '1rem' }}
+        style={{ marginBottom: '1rem', fontWeight: '700', letterSpacing: '0.04em' }}
       >
-        Proceed to Demo Checkout
+        Proceed to Checkout ({formatINR(grandTotal)})
       </Button>
 
       {/* Store Call / WhatsApp Help */}
@@ -146,7 +148,9 @@ export const BagSummary = ({
               fontSize: '0.8rem',
               color: 'var(--text-muted)',
               textDecoration: 'underline',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none'
             }}
           >
             Empty Shopping Bag
@@ -154,88 +158,24 @@ export const BagSummary = ({
         </div>
       )}
 
-      {/* Demo Checkout Simulation Modal */}
+      {/* Unified Multi-step Checkout Modal */}
       {showCheckoutModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 'var(--z-modal)',
-            backgroundColor: 'rgba(0,0,0,0.65)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1.5rem'
+        <CheckoutModal
+          isOpen={showCheckoutModal}
+          onClose={() => setShowCheckoutModal(false)}
+          items={items.map((it) => ({
+            product: { name: it.name, price: it.price },
+            name: it.name,
+            size: it.size,
+            colour: it.colour,
+            quantity: it.quantity,
+            price: it.price,
+            image: it.image
+          }))}
+          onOrderSuccess={() => {
+            if (onClearBag) onClearBag();
           }}
-        >
-          <div
-            style={{
-              backgroundColor: 'var(--color-white)',
-              borderRadius: 'var(--radius-md)',
-              maxWidth: '520px',
-              width: '100%',
-              padding: '2rem',
-              boxShadow: 'var(--shadow-lg)',
-              position: 'relative'
-            }}
-          >
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-latte)',
-                color: 'var(--color-caramel)',
-                marginBottom: '1rem'
-              }}
-            >
-              <CheckIcon size={28} />
-            </div>
-
-            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.6rem', marginBottom: '8px' }}>
-              Order Simulation Confirmed
-            </h3>
-
-            <div
-              style={{
-                backgroundColor: 'var(--color-latte-soft)',
-                border: '1px solid var(--border-subtle)',
-                padding: '12px 16px',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: '1rem',
-                fontSize: '0.85rem',
-                color: 'var(--color-espresso)'
-              }}
-            >
-              <strong>Demo Disclaimer:</strong> This website is an interactive demonstration for{' '}
-              <strong>MR SM Multi Brand Store (Mr. Shiva Yadav)</strong>. No real financial payments have been collected.
-            </div>
-
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-              In the future production release, this step will trigger secure UPI / Razorpay payment integration, SMS confirmation to <strong>Mr. Shiva Yadav</strong>, and customer order tracking.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Order Value: <strong>{formatINR(grandTotal)}</strong> ({totalItems} items)
-              </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Store Address: 1st Floor, Subedari, Hanamkonda, Warangal
-              </div>
-            </div>
-
-            <Button
-              variant="primary"
-              isFullWidth
-              onClick={() => setShowCheckoutModal(false)}
-            >
-              Close & Continue Browsing
-            </Button>
-          </div>
-        </div>
+        />
       )}
     </div>
   );

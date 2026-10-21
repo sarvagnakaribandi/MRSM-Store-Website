@@ -114,6 +114,7 @@ export const BagPage = () => {
           {/* Right: Order Summary Box */}
           <div style={{ flex: '1 1 40%' }}>
             <BagSummary
+              items={items}
               totalItems={totalItems}
               subtotal={subtotal}
               totalSavings={totalSavings}
