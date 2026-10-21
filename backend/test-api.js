@@ -1,5 +1,8 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const http = require('http');
 const app = require('./src/app');
+const { connectDB } = require('./src/config/db');
 
 // Start temporary test server
 const testServer = http.createServer(app);
@@ -46,6 +49,7 @@ async function runTestSuite() {
   };
 
   const PORT = 5055;
+  await connectDB();
   await new Promise((resolve) => testServer.listen(PORT, resolve));
 
   const baseOptions = {
