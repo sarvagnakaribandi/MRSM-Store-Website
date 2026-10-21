@@ -252,6 +252,12 @@ exports.createProduct = async (req, res, next) => {
         .replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
     }
 
+    // Always ensure new products are marked as New Arrival (as requested)
+    data.isNewArrival = true;
+    if (!data.description) {
+      data.description = `Finely crafted ${data.name} available at MR SM Multi Brand Store in Subedari, Hanamkonda.`;
+    }
+
     // Ensure sizes and images arrays
     if (!Array.isArray(data.sizes) || data.sizes.length === 0) {
       data.sizes = ['M', 'L', 'XL'];
@@ -282,10 +288,24 @@ exports.createProduct = async (req, res, next) => {
 
     // In-memory fallback
     const list = getInMemoryProducts();
+    const catMap = {
+      'formal-shirts': { name: 'Formal Shirts', slug: 'formal-shirts' },
+      'casual-shirts': { name: 'Casual Shirts', slug: 'casual-shirts' },
+      'trousers-chinos': { name: 'Trousers & Chinos', slug: 'trousers-chinos' },
+      'denim-jeans': { name: 'Denim Jeans', slug: 'denim-jeans' },
+      'ethnic-wear': { name: 'Ethnic Wear', slug: 'ethnic-wear' },
+      'blazers-suits': { name: 'Blazers & Suits', slug: 'blazers-suits' }
+    };
+    const catObj =
+      typeof data.category === 'object'
+        ? data.category
+        : catMap[data.category] || { name: data.category || 'Menswear', slug: data.category || 'menswear' };
+
     const newProd = {
       _id: `prod_mem_${Date.now()}`,
       ...data,
-      category: typeof data.category === 'object' ? data.category : { name: data.category || 'Menswear', slug: 'menswear' },
+      isNewArrival: true,
+      category: catObj,
       createdAt: new Date().toISOString()
     };
     list.unshift(newProd);

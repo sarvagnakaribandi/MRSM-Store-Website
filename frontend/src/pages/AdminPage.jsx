@@ -196,20 +196,20 @@ export const AdminPage = () => {
       stock: parseInt(formData.stock, 10) || 0,
       description: formData.description.trim(),
       isFeatured: formData.isFeatured,
-      isNewArrival: formData.isNewArrival
+      isNewArrival: true // Guarantee every newly added garment is displayed on New Arrivals!
     };
 
     try {
       if (editingProduct) {
         // UPDATE
-        const updated = await updateProduct(editingProduct._id, payload);
-        setProducts((prev) => prev.map((p) => (p._id === editingProduct._id ? { ...p, ...payload } : p)));
+        await updateProduct(editingProduct._id, payload);
+        await loadData();
         showToast(`✓ Updated "${formData.name}" successfully!`);
       } else {
         // CREATE
-        const created = await createProduct(payload);
-        setProducts((prev) => [created || { ...payload, _id: `p_${Date.now()}` }, ...prev]);
-        showToast(`✓ Added new garment "${formData.name}" to inventory!`);
+        await createProduct(payload);
+        await loadData();
+        showToast(`✓ Added "${formData.name}" to inventory & New Arrivals!`);
       }
       setShowProductModal(false);
     } catch (err) {
@@ -223,7 +223,7 @@ export const AdminPage = () => {
     if (window.confirm(`Are you sure you want to remove "${prod.name}" from the store catalogue?`)) {
       try {
         await deleteProduct(prod._id);
-        setProducts((prev) => prev.filter((p) => p._id !== prod._id));
+        await loadData();
         showToast(`🗑️ "${prod.name}" removed from inventory.`);
       } catch (err) {
         console.error('Error deleting product:', err);
