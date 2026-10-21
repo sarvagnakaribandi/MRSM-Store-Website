@@ -1,0 +1,132 @@
+/**
+ * MR SM Multi Brand Store — Mandatory Design System Tokens
+ * Exact palette hex codes:
+ * - Espresso: #2B1D17
+ * - Mocha:    #6B4A3A
+ * - Caramel:  #C48A5A
+ * - Latte:    #E7D6C1
+ * - Cream:    #FAF6F0
+ * - White:    #FFFFFF
+ */
+
+:root {
+  /* Brand Mandatory Palette */
+  --color-espresso: #2B1D17;
+  --color-espresso-dark: #1E140F;
+  --color-espresso-light: #3D2920;
+  --color-espresso-rgb: 43, 29, 23;
+
+  --color-mocha: #6B4A3A;
+  --color-mocha-dark: #553A2D;
+  --color-mocha-light: #835C49;
+  --color-mocha-rgb: 107, 74, 58;
+
+  --color-caramel: #C48A5A;
+  --color-caramel-hover: #B37B4D;
+  --color-caramel-light: #D9A477;
+  --color-caramel-soft: rgba(196, 138, 90, 0.15);
+  --color-caramel-rgb: 196, 138, 90;
+
+  --color-latte: #E7D6C1;
+  --color-latte-soft: rgba(231, 214, 193, 0.45);
+  --color-latte-dark: #D4BEA2;
+  --color-latte-rgb: 231, 214, 193;
+
+  --color-cream: #FAF6F0;
+  --color-cream-soft: #F5EFE6;
+  --color-cream-rgb: 250, 246, 240;
+
+  --color-white: #FFFFFF;
+  --color-white-rgb: 255, 255, 255;
+
+  /* Semantic UI Colors */
+  --bg-primary: var(--color-cream);
+  --bg-surface: var(--color-white);
+  --bg-panel: var(--color-latte-soft);
+  --bg-header: var(--color-espresso);
+  --bg-footer: var(--color-espresso);
+
+  --text-primary: var(--color-espresso);
+  --text-secondary: var(--color-mocha);
+  --text-muted: #7A6960;
+  --text-inverse: var(--color-cream);
+  --text-inverse-white: var(--color-white);
+
+  --border-subtle: #E2D5C7;
+  --border-strong: var(--color-latte-dark);
+  --border-accent: var(--color-caramel);
+
+  --badge-bg: var(--color-caramel);
+  --badge-text: var(--color-white);
+
+  /* Functional Status Colors */
+  --status-success: #2E6F40;
+  --status-success-bg: #E8F5E9;
+  --status-error: #A82828;
+  --status-error-bg: #FBEAEA;
+  --status-warning: #9A6500;
+  --status-warning-bg: #FFF7E6;
+
+  /* Typography */
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --font-size-xs: 0.75rem;     /* 12px */
+  --font-size-sm: 0.875rem;    /* 14px */
+  --font-size-base: 1rem;      /* 16px */
+  --font-size-lg: 1.125rem;    /* 18px */
+  --font-size-xl: 1.25rem;     /* 20px */
+  --font-size-2xl: 1.5rem;     /* 24px */
+  --font-size-3xl: 2rem;       /* 32px */
+  --font-size-4xl: 2.5rem;     /* 40px */
+  --font-size-5xl: 3.25rem;    /* 52px */
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* Spacing Scale */
+  --space-2xs: 0.25rem; /* 4px */
+  --space-xs: 0.5rem;   /* 8px */
+  --space-sm: 0.75rem;  /* 12px */
+  --space-md: 1rem;     /* 16px */
+  --space-lg: 1.5rem;   /* 24px */
+  --space-xl: 2rem;     /* 32px */
+  --space-2xl: 3rem;    /* 48px */
+  --space-3xl: 4.5rem;  /* 72px */
+
+  /* Containers & Layout */
+  --container-max-width: 1240px;
+  --container-narrow-width: 860px;
+  --container-padding: 1.5rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(43, 29, 23, 0.05);
+  --shadow-md: 0 4px 14px rgba(43, 29, 23, 0.08);
+  --shadow-lg: 0 12px 30px rgba(43, 29, 23, 0.12);
+  --shadow-card: 0 2px 12px rgba(43, 29, 23, 0.06);
+  --shadow-card-hover: 0 10px 24px rgba(43, 29, 23, 0.12);
+
+  /* Border Radius */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Elevation */
+  --z-header: 100;
+  --z-drawer: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+}
