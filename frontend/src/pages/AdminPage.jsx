@@ -391,9 +391,6 @@ export const AdminPage = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Link to="/" className="btn btn-outline btn-sm" style={{ color: 'var(--color-cream)', borderColor: 'rgba(231,214,193,0.4)' }}>
-              🌐 View Live Store
-            </Link>
             <button
               type="button"
               onClick={handleLogout}
@@ -401,9 +398,10 @@ export const AdminPage = () => {
                 backgroundColor: 'rgba(255,255,255,0.1)',
                 border: '1px solid rgba(255,255,255,0.2)',
                 color: 'var(--color-cream)',
-                padding: '6px 12px',
+                padding: '6px 14px',
                 borderRadius: 'var(--radius-xs)',
                 fontSize: '0.8rem',
+                fontWeight: '600',
                 cursor: 'pointer'
               }}
             >

@@ -16,6 +16,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 export const AppRoutes = () => {
   return (
     <Routes>
+      {/* Customer Storefront Routes wrapped in MainLayout (Header, AnnouncementBar, Footer) */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/shop" element={<ShopPage />} />
@@ -26,9 +27,11 @@ export const AppRoutes = () => {
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
+
+      {/* Standalone Admin Portal (Independent from user storefront navigation) */}
+      <Route path="/admin" element={<AdminPage />} />
     </Routes>
   );
 };
