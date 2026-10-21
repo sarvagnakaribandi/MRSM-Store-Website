@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = (env, argv) => {
@@ -44,6 +45,9 @@ module.exports = (env, argv) => {
       ]
     },
     plugins: [
+      new webpack.DefinePlugin({
+        'process.env': JSON.stringify({})
+      }),
       new HtmlWebpackPlugin({
         template: path.resolve(__dirname, 'public/index.html'),
         title: 'MR SM Multi Brand Store | Premium Men\'s Wear',

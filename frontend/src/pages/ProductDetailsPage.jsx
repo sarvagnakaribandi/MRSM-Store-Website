@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getProductById, getProducts, submitContactInquiry } from '../services/api';
 import { useBag } from '../context/BagContext';
 import PriceDisplay, { formatINR } from '../components/common/PriceDisplay';
@@ -8,10 +8,19 @@ import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import ProductCard from '../components/product/ProductCard';
-import { CheckIcon, BagIcon, PhoneIcon, WhatsAppIcon, CloseIcon, MapPinIcon } from '../components/common/Icons';
+import SizeChart from '../components/product/SizeChart';
+import {
+  CheckIcon,
+  BagIcon,
+  PhoneIcon,
+  WhatsAppIcon,
+  CloseIcon,
+  MapPinIcon
+} from '../components/common/Icons';
 
 export const ProductDetailsPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { addToBag } = useBag();
 
   const [product, setProduct] = useState(null);
@@ -25,15 +34,29 @@ export const ProductDetailsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
 
-  // Direct "Book Now" Modal States
+  // Multi-step "Book Now" Checkout States
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookingName, setBookingName] = useState('');
-  const [bookingPhone, setBookingPhone] = useState('');
-  const [bookingFulfillment, setBookingFulfillment] = useState('pickup'); // 'pickup' | 'delivery'
-  const [bookingPayment, setBookingPayment] = useState('pay_at_store');   // 'pay_at_store' | 'upi_card'
-  const [bookingErrors, setBookingErrors] = useState({});
-  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
-  const [bookingSuccessData, setBookingSuccessData] = useState(null);
+  const [checkoutStep, setCheckoutStep] = useState(1); // 1 = Address, 2 = Payment Method, 3 = Success Card
+
+  // Step 1: Address & Receiver Details (Matches user reference Image 1 & 2)
+  const [receiverName, setReceiverName] = useState('');
+  const [receiverPhone, setReceiverPhone] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState('doorstep'); // 'doorstep' | 'store_pickup'
+  const [houseNumber, setHouseNumber] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [pincode, setPincode] = useState('506001');
+  const [addressType, setAddressType] = useState('Home'); // 'Home' | 'Office' | 'Others'
+  const [isDefaultAddress, setIsDefaultAddress] = useState(true);
+  const [addressErrors, setAddressErrors] = useState({});
+
+  // Step 2: Payment Method (Matches user reference Image 3)
+  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' | 'online'
+  const [selectedOnlineOption, setSelectedOnlineOption] = useState('phonepe'); // 'phonepe' | 'gpay' | 'cards' | 'netbanking'
+  const [showPriceDetails, setShowPriceDetails] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+
+  // Step 3: Placed Order Success Data
+  const [placedOrderData, setPlacedOrderData] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,55 +130,102 @@ export const ProductDetailsPage = () => {
       return;
     }
     setValidationError('');
-    setBookingErrors({});
-    setBookingSuccessData(null);
+    setAddressErrors({});
+    setCheckoutStep(1);
+    setPlacedOrderData(null);
     setShowBookingModal(true);
   };
 
-  const handleConfirmBooking = async (e) => {
+  // Step 1 Validation -> Proceed to Payment Step 2
+  const handleProceedToPayment = (e) => {
     e.preventDefault();
     const errs = {};
-    if (!bookingName.trim() || bookingName.trim().length < 2) {
-      errs.name = 'Please enter your full name (minimum 2 characters).';
+
+    if (!receiverName.trim() || receiverName.trim().length < 2) {
+      errs.name = 'Please provide receiver full name.';
     }
-    if (!bookingPhone.trim() || !/^[0-9]{10}$/.test(bookingPhone.replace(/[\s-]/g, ''))) {
+    if (!receiverPhone.trim() || !/^[0-9]{10}$/.test(receiverPhone.replace(/[\s-]/g, ''))) {
       errs.phone = 'Please enter a valid 10-digit mobile number.';
     }
+
+    if (deliveryMode === 'doorstep') {
+      if (!houseNumber.trim()) {
+        errs.houseNumber = 'House number / Flat / Building is required.';
+      }
+      if (!streetAddress.trim()) {
+        errs.streetAddress = 'Locality / Street / Landmark is required.';
+      }
+      if (!pincode.trim() || !/^[0-9]{6}$/.test(pincode.trim())) {
+        errs.pincode = 'Valid 6-digit Pincode is required.';
+      }
+    }
+
     if (Object.keys(errs).length > 0) {
-      setBookingErrors(errs);
+      setAddressErrors(errs);
       return;
     }
 
-    setIsSubmittingBooking(true);
-    const refId = `MRSM-BK-${Math.floor(100000 + Math.random() * 900000)}`;
-    const lineTotal = product.price * quantity;
+    setAddressErrors({});
+    setCheckoutStep(2); // Advance to Payment Method step
+  };
+
+  // Step 2 Action -> Place Order & Trigger Step 3 Success Card
+  const handlePlaceOrder = async () => {
+    setIsSubmittingOrder(true);
+    const orderId = `MRSM-ORD-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const originalTotal = (product.compareAtPrice || product.price) * quantity;
+    const baseTotal = product.price * quantity;
+    const onlineDiscount = paymentMethod === 'online' ? 50 : 0;
+    const finalAmount = Math.max(0, baseTotal - onlineDiscount);
+
+    const fullAddress =
+      deliveryMode === 'store_pickup'
+        ? 'Store Trial & Pickup at 1st Floor, Opp. Royal Enfield Showroom, Beside A to Z Medicals, Subedari, Hanamkonda'
+        : `${houseNumber.trim()}, ${streetAddress.trim()}, Pincode: ${pincode.trim()} (${addressType})`;
+
+    const paymentLabel =
+      paymentMethod === 'cod'
+        ? deliveryMode === 'store_pickup'
+          ? 'Pay at Store upon Trial / Pickup'
+          : 'Cash on Delivery (COD)'
+        : `Pay Online (Instant UPI - ${selectedOnlineOption.toUpperCase()})`;
 
     try {
       await submitContactInquiry({
-        name: bookingName.trim(),
-        phone: bookingPhone.trim(),
-        subject: `Direct Booking: ${product.name} (${refId})`,
-        message: `Order Booking [${refId}]: ${product.name} | Size: ${selectedSize} | Colour: ${selectedColour.name} | Qty: ${quantity} | Total: ₹${lineTotal} | Fulfillment: ${bookingFulfillment === 'pickup' ? 'Showroom Trial & Pickup' : 'Home Delivery'} | Payment: ${bookingPayment === 'pay_at_store' ? 'Pay at Store on Pickup' : 'UPI/Online Demo'}`
+        name: receiverName.trim(),
+        phone: receiverPhone.trim(),
+        subject: `New Order Placed: ${orderId} (${product.name})`,
+        message: `ORDER CONFIRMATION [${orderId}]\nItem: ${product.name}\nSize: ${selectedSize}\nColour: ${selectedColour.name}\nQty: ${quantity}\nTotal Amount: ₹${finalAmount}\nDelivery Mode: ${deliveryMode === 'store_pickup' ? 'Showroom Pickup' : 'Home Delivery'}\nAddress: ${fullAddress}\nPayment: ${paymentLabel}`
       });
     } catch (err) {
-      console.warn('Booking notification notice:', err);
+      console.warn('Order submission notice:', err);
     } finally {
-      setIsSubmittingBooking(false);
-      setBookingSuccessData({
-        refId,
-        customerName: bookingName.trim(),
-        customerPhone: bookingPhone.trim(),
-        totalAmount: lineTotal,
-        fulfillment: bookingFulfillment,
-        payment: bookingPayment
+      setIsSubmittingOrder(false);
+      setPlacedOrderData({
+        orderId,
+        receiverName: receiverName.trim(),
+        receiverPhone: receiverPhone.trim(),
+        productName: product.name,
+        size: selectedSize,
+        colour: selectedColour.name,
+        colourHex: selectedColour.hex,
+        quantity,
+        originalTotal,
+        finalAmount,
+        onlineDiscount,
+        deliveryMode,
+        fullAddress,
+        paymentLabel
       });
+      setCheckoutStep(3); // Show Order Placed Success Card
     }
   };
 
   if (isLoading) {
     return (
       <div className="section" style={{ minHeight: '60vh' }}>
-        <LoadingSpinner message="Fetching product specifications..." />
+        <LoadingSpinner message="Fetching garment specifications..." />
       </div>
     );
   }
@@ -184,6 +254,8 @@ export const ProductDetailsPage = () => {
 
   const availableStock = typeof product.stock === 'number' ? product.stock : 10;
   const currentTotal = product.price * quantity;
+  const onlineDiscount = 50;
+  const payOnlineTotal = Math.max(0, currentTotal - onlineDiscount);
 
   return (
     <div className="section" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -379,7 +451,7 @@ export const ProductDetailsPage = () => {
 
             {/* Size Selector */}
             {Array.isArray(product.sizes) && product.sizes.length > 0 && (
-              <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ marginBottom: '0.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.875rem' }}>
                   <span style={{ fontWeight: '600', color: 'var(--color-espresso)' }}>
                     Select Size:
@@ -418,6 +490,12 @@ export const ProductDetailsPage = () => {
                     );
                   })}
                 </div>
+
+                {/* Size Chart Component (Placed directly below Select Size, as requested) */}
+                <SizeChart
+                  categorySlug={product.category?.slug || ''}
+                  sizes={product.sizes}
+                />
               </div>
             )}
 
@@ -481,7 +559,7 @@ export const ProductDetailsPage = () => {
                   {addedSuccess ? '✓ In Bag' : 'Add to Bag'}
                 </Button>
 
-                {/* 2. Book Now (Direct Checkout / Clothes Booking) */}
+                {/* 2. Book Now (Direct Multi-step Checkout) */}
                 <Button
                   variant="caramel"
                   size="lg"
@@ -605,7 +683,7 @@ export const ProductDetailsPage = () => {
       </div>
 
       {/* =========================================================================
-          Direct "BOOK NOW" & Payment Simulation Modal
+          MULTI-STEP "BOOK NOW" MODAL (Matches user reference Images 1, 2, 3)
           ========================================================================= */}
       {showBookingModal && (
         <div
@@ -618,370 +696,693 @@ export const ProductDetailsPage = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1.25rem'
+            padding: '1rem'
           }}
         >
           <div
             style={{
               backgroundColor: 'var(--color-white)',
               borderRadius: 'var(--radius-md)',
-              maxWidth: '560px',
+              maxWidth: '540px',
               width: '100%',
               maxHeight: '92vh',
               overflowY: 'auto',
               boxShadow: 'var(--shadow-lg)',
-              position: 'relative',
-              padding: '2rem'
+              position: 'relative'
             }}
           >
             {/* Modal Close Button */}
             <button
               type="button"
               onClick={() => setShowBookingModal(false)}
-              aria-label="Close booking modal"
+              aria-label="Close modal"
               style={{
                 position: 'absolute',
-                top: '18px',
-                right: '18px',
+                top: '16px',
+                right: '16px',
                 color: 'var(--text-muted)',
                 padding: '4px',
-                display: 'flex',
-                alignItems: 'center'
+                zIndex: 10
               }}
             >
               <CloseIcon size={22} />
             </button>
 
-            {!bookingSuccessData ? (
-              /* Booking Form View */
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span className="badge badge-caramel">Instant Reservation</span>
-                </div>
-
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', color: 'var(--color-espresso)', marginBottom: '4px' }}>
-                  Book & Reserve Garment
+            {/* -------------------------------------------------------------------
+                STEP 1: CONFIRM DELIVERY LOCATION / ADD ADDRESS (Image 1 & 2)
+                ------------------------------------------------------------------- */}
+            {checkoutStep === 1 && (
+              <div style={{ padding: '2rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.6rem', color: 'var(--color-espresso)', marginBottom: '1.25rem' }}>
+                  Confirm Delivery Location
                 </h2>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  Reserve your size and trial directly at <strong>MR SM Multi Brand Store (Hanamkonda)</strong>.
-                </p>
 
-                {/* Selected Item Summary Card */}
-                <div
-                  style={{
-                    backgroundColor: 'var(--color-latte-soft)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '1rem',
-                    display: 'flex',
-                    gap: '14px',
-                    alignItems: 'center',
-                    marginBottom: '1.5rem'
-                  }}
-                >
-                  <img
-                    src={images[0]}
-                    alt={product.name}
-                    style={{ width: '64px', height: '76px', objectFit: 'cover', borderRadius: 'var(--radius-xs)' }}
-                  />
-                  <div style={{ flexGrow: 1 }}>
-                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--color-espresso)', marginBottom: '4px' }}>
-                      {product.name}
-                    </div>
-                    <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <span>Size: <strong>{selectedSize}</strong></span>
-                      <span>•</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        Colour:
-                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: selectedColour?.hex || '#000', display: 'inline-block' }} />
-                        <strong>{selectedColour?.name}</strong>
-                      </span>
-                      <span>•</span>
-                      <span>Qty: <strong>{quantity}</strong></span>
-                    </div>
-                    <div style={{ marginTop: '6px', fontSize: '0.95rem', fontWeight: '800', color: 'var(--color-espresso)' }}>
-                      Total Amount: {formatINR(currentTotal)}
-                    </div>
+                {/* Receiver's Details Card */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--color-espresso)', marginBottom: '8px' }}>
+                    Receiver's Details
                   </div>
-                </div>
-
-                {/* Booking Form */}
-                <form onSubmit={handleConfirmBooking} noValidate>
-                  {/* Customer Full Name */}
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label className="form-label" htmlFor="booking-name">
-                      Your Full Name <span style={{ color: 'var(--status-error)' }}>*</span>
-                    </label>
-                    <input
-                      id="booking-name"
-                      type="text"
-                      className="form-input"
-                      value={bookingName}
-                      onChange={(e) => setBookingName(e.target.value)}
-                      placeholder="e.g. Ramesh Kumar"
-                    />
-                    {bookingErrors.name && <div className="form-error">{bookingErrors.name}</div>}
-                  </div>
-
-                  {/* Customer Phone */}
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label className="form-label" htmlFor="booking-phone">
-                      Mobile Number (10 digits) <span style={{ color: 'var(--status-error)' }}>*</span>
-                    </label>
-                    <input
-                      id="booking-phone"
-                      type="tel"
-                      className="form-input"
-                      value={bookingPhone}
-                      onChange={(e) => setBookingPhone(e.target.value)}
-                      placeholder="e.g. 9876543210"
-                    />
-                    {bookingErrors.phone && <div className="form-error">{bookingErrors.phone}</div>}
-                  </div>
-
-                  {/* Fulfillment Option */}
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label className="form-label">
-                      Fulfillment Method
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <label
-                        style={{
-                          padding: '10px 12px',
-                          border: bookingFulfillment === 'pickup' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-sm)',
-                          backgroundColor: bookingFulfillment === 'pickup' ? 'var(--color-latte-soft)' : 'var(--color-white)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '0.85rem'
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="fulfillment"
-                          checked={bookingFulfillment === 'pickup'}
-                          onChange={() => setBookingFulfillment('pickup')}
-                        />
-                        <div>
-                          <strong>Showroom Trial & Pickup</strong>
-                          <div style={{ fontSize: '0.75rem', color: '#2E6F40', fontWeight: '700' }}>FREE</div>
-                        </div>
-                      </label>
-
-                      <label
-                        style={{
-                          padding: '10px 12px',
-                          border: bookingFulfillment === 'delivery' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-sm)',
-                          backgroundColor: bookingFulfillment === 'delivery' ? 'var(--color-latte-soft)' : 'var(--color-white)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '0.85rem'
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="fulfillment"
-                          checked={bookingFulfillment === 'delivery'}
-                          onChange={() => setBookingFulfillment('delivery')}
-                        />
-                        <div>
-                          <strong>Home Delivery</strong>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Warangal / Hanamkonda</div>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Payment Method Option */}
-                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                    <label className="form-label">
-                      Payment Preference
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <label
-                        style={{
-                          padding: '10px 12px',
-                          border: bookingPayment === 'pay_at_store' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-sm)',
-                          backgroundColor: bookingPayment === 'pay_at_store' ? 'var(--color-latte-soft)' : 'var(--color-white)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '0.85rem'
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="payment"
-                          checked={bookingPayment === 'pay_at_store'}
-                          onChange={() => setBookingPayment('pay_at_store')}
-                        />
-                        <div>
-                          <strong>Pay at Store on Pickup</strong>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cash / UPI / GPay</div>
-                        </div>
-                      </label>
-
-                      <label
-                        style={{
-                          padding: '10px 12px',
-                          border: bookingPayment === 'upi_card' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-sm)',
-                          backgroundColor: bookingPayment === 'upi_card' ? 'var(--color-latte-soft)' : 'var(--color-white)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '0.85rem'
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="payment"
-                          checked={bookingPayment === 'upi_card'}
-                          onChange={() => setBookingPayment('upi_card')}
-                        />
-                        <div>
-                          <strong>Simulated Online Pay</strong>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Demo Simulation</div>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Demo Disclaimer notice */}
                   <div
                     style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--color-mocha)',
-                      backgroundColor: 'rgba(196, 138, 90, 0.12)',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--radius-xs)',
-                      marginBottom: '1.25rem'
+                      backgroundColor: 'var(--color-cream)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
                     }}
                   >
-                    💡 <strong>Demo Reservation:</strong> This reserves your clothing piece at MR SM Multi Brand Store. No actual credit card charge is processed in demo mode.
-                  </div>
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Receiver Full Name (e.g. Sara Khan) *"
+                        value={receiverName}
+                        onChange={(e) => setReceiverName(e.target.value)}
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          fontSize: '0.95rem',
+                          fontWeight: '600',
+                          color: 'var(--color-espresso)',
+                          outline: 'none',
+                          borderBottom: '1px solid var(--border-subtle)',
+                          paddingBottom: '4px'
+                        }}
+                      />
+                      {addressErrors.name && <div className="form-error">{addressErrors.name}</div>}
+                    </div>
 
-                  {/* Buttons */}
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <div>
+                      <input
+                        type="tel"
+                        placeholder="10-digit Phone Number (e.g. 6300254473) *"
+                        value={receiverPhone}
+                        onChange={(e) => setReceiverPhone(e.target.value)}
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          fontSize: '0.9rem',
+                          color: 'var(--text-muted)',
+                          outline: 'none'
+                        }}
+                      />
+                      {addressErrors.phone && <div className="form-error">{addressErrors.phone}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delivery Mode: Doorstep vs Showroom Trial */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMode('doorstep')}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.85rem',
+                        fontWeight: deliveryMode === 'doorstep' ? '700' : '500',
+                        border: deliveryMode === 'doorstep' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                        backgroundColor: deliveryMode === 'doorstep' ? 'var(--color-latte-soft)' : 'var(--color-white)',
+                        color: 'var(--color-espresso)',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div>🏠 Doorstep Delivery</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Warangal / Hanamkonda</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMode('store_pickup')}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.85rem',
+                        fontWeight: deliveryMode === 'store_pickup' ? '700' : '500',
+                        border: deliveryMode === 'store_pickup' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                        backgroundColor: deliveryMode === 'store_pickup' ? 'var(--color-latte-soft)' : 'var(--color-white)',
+                        color: 'var(--color-espresso)',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div>🏬 Store Trial & Pickup</div>
+                      <div style={{ fontSize: '0.75rem', color: '#2E6F40', fontWeight: '700' }}>FREE</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Address Form (Doorstep Mode) */}
+                {deliveryMode === 'doorstep' ? (
+                  <form onSubmit={handleProceedToPayment}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--color-espresso)', marginBottom: '8px' }}>
+                      Add Address
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                        HOUSE NUMBER , FLAT , BUILDING *
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={80}
+                        className="form-input"
+                        placeholder="House no., Apartment name, Building"
+                        value={houseNumber}
+                        onChange={(e) => setHouseNumber(e.target.value)}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        <span>Needed for doorstep delivery.</span>
+                        <span>{houseNumber.length}/80</span>
+                      </div>
+                      {addressErrors.houseNumber && <div className="form-error">{addressErrors.houseNumber}</div>}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                        ADDRESS (LOCALITY, STREET, LANDMARK) *
+                      </label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Street, Near Landmark, Colony"
+                        value={streetAddress}
+                        onChange={(e) => setStreetAddress(e.target.value)}
+                      />
+                      {addressErrors.streetAddress && <div className="form-error">{addressErrors.streetAddress}</div>}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                        PINCODE *
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        className="form-input"
+                        placeholder="e.g. 506001"
+                        value={pincode}
+                        onChange={(e) => setPincode(e.target.value)}
+                      />
+                      {addressErrors.pincode && <div className="form-error">{addressErrors.pincode}</div>}
+                    </div>
+
+                    {/* Type of Address Radio */}
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '6px' }}>
+                        TYPE OF ADDRESS
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px' }}>
+                        {['Home', 'Office', 'Others'].map((type) => (
+                          <label key={type} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="addrType"
+                              checked={addressType === type}
+                              onChange={() => setAddressType(type)}
+                            />
+                            <span>{type === 'Home' ? '🏠 Home' : type === 'Office' ? '🏢 Office' : '📍 Others'}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Set Default */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={isDefaultAddress}
+                          onChange={(e) => setIsDefaultAddress(e.target.checked)}
+                        />
+                        <span>Set this as default address</span>
+                      </label>
+                    </div>
+
+                    {/* Save & Proceed Button */}
                     <Button
                       type="submit"
-                      variant="caramel"
+                      variant="primary"
                       size="lg"
                       isFullWidth
-                      isLoading={isSubmittingBooking}
+                      style={{ fontWeight: '700', letterSpacing: '0.06em' }}
                     >
-                      Confirm Booking ({formatINR(currentTotal)})
+                      SAVE & PROCEED
                     </Button>
+                  </form>
+                ) : (
+                  /* Store Pickup Mode */
+                  <div>
+                    <div
+                      style={{
+                        backgroundColor: 'var(--color-latte-soft)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '1rem',
+                        fontSize: '0.875rem',
+                        marginBottom: '1.5rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                        <MapPinIcon size={18} style={{ color: 'var(--color-caramel)', flexShrink: 0 }} />
+                        <strong style={{ color: 'var(--color-espresso)' }}>MR SM Showroom Pickup</strong>
+                      </div>
+                      <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.5, fontSize: '0.825rem' }}>
+                        1st Floor, 24-7-302/1, Opp. Royal Enfield Showroom, Beside A to Z Medicals, Subedari, Hanamkonda, Warangal
+                      </p>
+                      <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#2E6F40', fontWeight: '700' }}>
+                        ✓ Free custom size trial & alteration support included!
+                      </div>
+                    </div>
+
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="primary"
                       size="lg"
-                      onClick={() => setShowBookingModal(false)}
+                      isFullWidth
+                      onClick={handleProceedToPayment}
+                      style={{ fontWeight: '700', letterSpacing: '0.06em' }}
                     >
-                      Cancel
+                      SAVE & PROCEED
                     </Button>
                   </div>
-                </form>
+                )}
               </div>
-            ) : (
-              /* Booking Success Confirmation View */
-              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+            )}
+
+            {/* -------------------------------------------------------------------
+                STEP 2: PAYMENT METHOD (Matches user reference Image 3)
+                ------------------------------------------------------------------- */}
+            {checkoutStep === 2 && (
+              <div>
+                {/* Step Header */}
                 <div
                   style={{
-                    width: '56px',
-                    height: '56px',
+                    padding: '1.25rem 1.75rem',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutStep(1)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.85rem',
+                      fontWeight: '700',
+                      color: 'var(--color-mocha)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ‹ BACK
+                  </button>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '700', letterSpacing: '0.04em', margin: 0, textTransform: 'uppercase' }}>
+                    PAYMENT METHOD
+                  </h3>
+                  <span
+                    style={{
+                      border: '1px solid var(--color-caramel)',
+                      color: 'var(--color-caramel)',
+                      fontSize: '0.7rem',
+                      fontWeight: '700',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-full)'
+                    }}
+                  >
+                    STEP 2/2
+                  </span>
+                </div>
+
+                {/* Offer Discount Banner (Image 3 green ribbon) */}
+                <div
+                  style={{
+                    backgroundColor: '#E8F5E9',
+                    color: '#2E6F40',
+                    textAlign: 'center',
+                    padding: '8px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    borderBottom: '1px solid #C8E6C9'
+                  }}
+                >
+                  ✨ ₹{onlineDiscount} OFF on this order when you Pay Online
+                </div>
+
+                <div style={{ padding: '1.5rem 1.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--color-espresso)', marginBottom: '1rem' }}>
+                    Select payment method
+                  </div>
+
+                  {/* Option 1: Cash on Delivery / Store Pickup */}
+                  <div
+                    onClick={() => setPaymentMethod('cod')}
+                    style={{
+                      border: paymentMethod === 'cod' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '12px 16px',
+                      marginBottom: '1rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: paymentMethod === 'cod' ? 'var(--color-latte-soft)' : 'var(--color-white)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--color-espresso)' }}>
+                        {formatINR(currentTotal)}
+                      </span>
+                      <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '14px' }}>
+                        <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>
+                          {deliveryMode === 'store_pickup' ? 'Pay at Showroom on Pickup' : 'Cash on Delivery'} 💵
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Pay with cash or UPI on delivery
+                        </div>
+                      </div>
+                    </div>
+                    <input
+                      type="radio"
+                      name="payMethod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={() => setPaymentMethod('cod')}
+                    />
+                  </div>
+
+                  {/* Option 2: Pay Online (Featured box with sub-options) */}
+                  <div
+                    style={{
+                      border: paymentMethod === 'online' ? '2px solid var(--color-caramel)' : '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      overflow: 'hidden',
+                      marginBottom: '1.5rem'
+                    }}
+                  >
+                    <div
+                      onClick={() => setPaymentMethod('online')}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: paymentMethod === 'online' ? 'var(--color-latte-soft)' : 'var(--color-white)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                            {formatINR(currentTotal)}
+                          </div>
+                          <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#2E6F40' }}>
+                            {formatINR(payOnlineTotal)}
+                          </div>
+                          <span style={{ fontSize: '0.65rem', backgroundColor: '#E8F5E9', color: '#2E6F40', fontWeight: '700', padding: '1px 5px', borderRadius: '3px' }}>
+                            Save ₹{onlineDiscount}
+                          </span>
+                        </div>
+
+                        <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '14px' }}>
+                          <div style={{ fontWeight: '700', fontSize: '0.9rem' }}>
+                            Pay Online 🔥
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#2E6F40' }}>
+                            ⚡ Instant Confirmation + Extra Savings
+                          </div>
+                        </div>
+                      </div>
+
+                      <input
+                        type="radio"
+                        name="payMethod"
+                        checked={paymentMethod === 'online'}
+                        onChange={() => setPaymentMethod('online')}
+                      />
+                    </div>
+
+                    {/* Sub-options for Online Pay */}
+                    {paymentMethod === 'online' && (
+                      <div style={{ borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--color-white)', padding: '12px 16px' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--color-mocha)', marginBottom: '8px' }}>
+                          Select UPI / Online Option:
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {[
+                            { id: 'phonepe', label: 'PhonePe UPI', extra: 'Assured ₹20–₹100 Cashback' },
+                            { id: 'gpay', label: 'Google Pay UPI', extra: 'Instant UPI PIN Checkout' },
+                            { id: 'paytm', label: 'Paytm / BHIM UPI', extra: 'All bank accounts supported' },
+                            { id: 'cards', label: 'Debit / Credit Cards', extra: 'Visa, MasterCard, RuPay' },
+                            { id: 'netbanking', label: 'Net Banking', extra: 'SBI, HDFC, ICICI, Axis & others' }
+                          ].map((opt) => (
+                            <label
+                              key={opt.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '8px 10px',
+                                borderRadius: 'var(--radius-xs)',
+                                border: selectedOnlineOption === opt.id ? '1px solid var(--color-caramel)' : '1px solid #ECECEC',
+                                backgroundColor: selectedOnlineOption === opt.id ? 'var(--color-latte-soft)' : '#FAFAFA',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                  type="radio"
+                                  name="onlineSub"
+                                  checked={selectedOnlineOption === opt.id}
+                                  onChange={() => setSelectedOnlineOption(opt.id)}
+                                />
+                                <strong>{opt.label}</strong>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: '#2E6F40', fontWeight: '600' }}>
+                                {opt.extra}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expandable Price Breakdown */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPriceDetails((p) => !p)}
+                      style={{ fontSize: '0.8rem', color: 'var(--color-mocha)', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      {showPriceDetails ? 'Hide Price Details ▲' : 'VIEW PRICE DETAILS ▼'}
+                    </button>
+
+                    {showPriceDetails && (
+                      <div
+                        style={{
+                          backgroundColor: 'var(--color-cream)',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-xs)',
+                          marginTop: '8px',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Item Price ({quantity}x):</span>
+                          <span>{formatINR(product.price * quantity)}</span>
+                        </div>
+                        {paymentMethod === 'online' && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2E6F40' }}>
+                            <span>Online Discount:</span>
+                            <span>− {formatINR(onlineDiscount)}</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Delivery / Pickup:</span>
+                          <span style={{ color: '#2E6F40', fontWeight: '700' }}>FREE</span>
+                        </div>
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: '700', color: 'var(--color-espresso)' }}>
+                          <span>Total Amount:</span>
+                          <span>{formatINR(paymentMethod === 'online' ? payOnlineTotal : currentTotal)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Bar: Total Price + PLACE ORDER (Matches user reference Image 3) */}
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-white)',
+                    borderTop: '2px solid var(--border-subtle)',
+                    padding: '1rem 1.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--color-espresso)' }}>
+                      {formatINR(paymentMethod === 'online' ? payOnlineTotal : currentTotal)}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {paymentMethod === 'online' ? 'Online Demo Price' : 'Pay on Delivery / Pickup'}
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="caramel"
+                    size="lg"
+                    isLoading={isSubmittingOrder}
+                    onClick={handlePlaceOrder}
+                    style={{ minWidth: '180px', fontWeight: '800', fontSize: '0.95rem' }}
+                  >
+                    Place Order
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* -------------------------------------------------------------------
+                STEP 3: ORDER PLACED SUCCESSFUL CARD & BACK TO HOME
+                ------------------------------------------------------------------- */}
+            {checkoutStep === 3 && placedOrderData && (
+              <div style={{ padding: '2.5rem 2rem', textAlign: 'center' }}>
+                {/* Celebratory Check Icon */}
+                <div
+                  style={{
+                    width: '68px',
+                    height: '68px',
                     borderRadius: '50%',
                     backgroundColor: 'var(--status-success-bg)',
                     color: 'var(--status-success)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: '1rem'
+                    marginBottom: '1rem',
+                    border: '2px solid #C3E6CB'
                   }}
                 >
-                  <CheckIcon size={32} />
+                  <CheckIcon size={40} />
                 </div>
 
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', color: 'var(--color-espresso)', marginBottom: '6px' }}>
-                  Garment Reserved Successfully!
+                <span
+                  style={{
+                    display: 'inline-block',
+                    backgroundColor: '#E8F5E9',
+                    color: '#2E6F40',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-xs)',
+                    letterSpacing: '0.08em',
+                    marginBottom: '8px'
+                  }}
+                >
+                  Order Confirmed
+                </span>
+
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', color: 'var(--color-espresso)', marginBottom: '6px' }}>
+                  Order Placed Successfully!
                 </h2>
 
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-                  Your clothing reservation has been registered with MR SM Multi Brand Store.
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Thank you! Your clothing reservation has been registered with <strong>MR SM Multi Brand Store</strong>.
                 </p>
 
-                {/* Booking ID Chip */}
+                {/* Order ID Badge */}
                 <div
                   style={{
                     display: 'inline-block',
                     backgroundColor: 'var(--color-latte-soft)',
                     border: '1px dashed var(--color-caramel)',
-                    padding: '8px 18px',
+                    padding: '8px 20px',
                     borderRadius: 'var(--radius-sm)',
-                    fontSize: '1.05rem',
+                    fontSize: '1.1rem',
                     fontWeight: '800',
                     color: 'var(--color-espresso)',
-                    letterSpacing: '0.08em',
-                    marginBottom: '1.5rem'
+                    letterSpacing: '0.06em',
+                    marginBottom: '1.75rem'
                   }}
                 >
-                  Booking ID: {bookingSuccessData.refId}
+                  Order ID: {placedOrderData.orderId}
                 </div>
 
-                {/* Booking Details Card */}
+                {/* Order Details Card */}
                 <div
                   style={{
-                    backgroundColor: 'var(--color-white)',
+                    backgroundColor: 'var(--color-cream)',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: 'var(--radius-sm)',
                     padding: '1.25rem',
                     textAlign: 'left',
-                    fontSize: '0.875rem',
+                    fontSize: '0.85rem',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
-                    marginBottom: '1.5rem'
+                    marginBottom: '1.75rem'
                   }}
                 >
-                  <div><strong>Garment:</strong> {product.name} ({selectedSize}, {selectedColour?.name})</div>
-                  <div><strong>Quantity:</strong> {quantity} item(s)</div>
-                  <div><strong>Total to Pay:</strong> <strong style={{ color: 'var(--color-espresso)', fontSize: '1.05rem' }}>{formatINR(bookingSuccessData.totalAmount)}</strong></div>
-                  <div><strong>Customer:</strong> {bookingSuccessData.customerName} ({bookingSuccessData.customerPhone})</div>
                   <div>
-                    <strong>Pickup Showroom:</strong> 1st Floor, Opp. Royal Enfield Showroom, Beside A to Z Medicals, Subedari, Hanamkonda
+                    <strong>Garment:</strong> {placedOrderData.productName}
+                  </div>
+                  <div>
+                    <strong>Size & Colour:</strong> Size {placedOrderData.size} • Colour: {placedOrderData.colour}
+                  </div>
+                  <div>
+                    <strong>Quantity:</strong> {placedOrderData.quantity} unit(s)
+                  </div>
+                  <div>
+                    <strong>Amount Payable:</strong> <strong style={{ color: 'var(--color-espresso)', fontSize: '1rem' }}>{formatINR(placedOrderData.finalAmount)}</strong>
+                  </div>
+                  <div>
+                    <strong>Payment Method:</strong> {placedOrderData.paymentLabel}
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px', marginTop: '4px' }}>
+                    <strong>Delivery Location:</strong>
+                    <div style={{ color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.4 }}>
+                      {placedOrderData.receiverName} ({placedOrderData.receiverPhone})<br />
+                      {placedOrderData.fullAddress}
+                    </div>
                   </div>
                 </div>
 
-                {/* WhatsApp Direct Action Button */}
+                {/* WhatsApp & Back to Home Actions */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <a
-                    href={`https://wa.me/918332867454?text=${encodeURIComponent(`Hi Mr. Shiva Yadav, I have booked "${product.name}" (Size: ${selectedSize}, Colour: ${selectedColour?.name}, Qty: ${quantity}, Total: ${formatINR(bookingSuccessData.totalAmount)}). Booking ID: ${bookingSuccessData.refId}. My Name: ${bookingSuccessData.customerName}, Phone: ${bookingSuccessData.customerPhone}. Please hold this for my showroom trial.`)}`}
+                    href={`https://wa.me/918332867454?text=${encodeURIComponent(`Hi Mr. Shiva Yadav, I have placed an order for "${placedOrderData.productName}" (Size: ${placedOrderData.size}, Colour: ${placedOrderData.colour}, Qty: ${placedOrderData.quantity}). Order ID: ${placedOrderData.orderId}. Total: ${formatINR(placedOrderData.finalAmount)}. Delivery to: ${placedOrderData.receiverName} (${placedOrderData.receiverPhone}), ${placedOrderData.fullAddress}. Please confirm my order.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-caramel btn-lg"
-                    style={{ width: '100%', gap: '8px', fontWeight: '700' }}
+                    style={{ width: '100%', fontWeight: '700', gap: '8px' }}
                   >
-                    <WhatsAppIcon size={20} /> Send Booking to WhatsApp (Mr. Shiva Yadav)
+                    <WhatsAppIcon size={20} /> Send Order to WhatsApp (Mr. Shiva Yadav)
                   </a>
 
+                  {/* Back to Home Button (As explicitly requested by user) */}
                   <Button
                     variant="primary"
-                    size="md"
+                    size="lg"
                     isFullWidth
                     onClick={() => {
                       setShowBookingModal(false);
-                      setBookingSuccessData(null);
+                      navigate('/');
                     }}
+                    style={{ fontWeight: '700' }}
                   >
-                    Done & Continue Browsing
+                    🏠 Back to Home
                   </Button>
                 </div>
               </div>
