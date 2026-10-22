@@ -707,17 +707,23 @@ export const MyOrdersPage = () => {
                           setCancelError('');
                         }}
                         style={{
-                          padding: '0.45rem 0.9rem',
+                          padding: '0.55rem 1.15rem',
                           borderRadius: 'var(--radius-sm)',
-                          border: '1px solid #D32F2F',
+                          border: '1.5px solid #D32F2F',
                           color: '#D32F2F',
-                          backgroundColor: 'transparent',
-                          fontWeight: '600',
-                          fontSize: '0.825rem',
-                          cursor: 'pointer'
+                          backgroundColor: '#FFF5F5',
+                          fontWeight: '700',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 4px rgba(211,47,47,0.08)'
                         }}
+                        title="Cancel this garment order"
                       >
-                        Cancel Order
+                        <span style={{ fontSize: '0.95rem', fontWeight: '900', lineHeight: 1 }}>✕</span> Cancel Order
                       </button>
                     )}
 
