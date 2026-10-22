@@ -157,25 +157,35 @@ export const ProductDetailsPage = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            flexWrap: 'wrap',
+            gap: '6px 8px',
             fontSize: '0.85rem',
             color: 'var(--text-muted)',
-            marginBottom: '2rem'
+            marginBottom: '1.5rem',
+            lineHeight: '1.4'
           }}
         >
-          <Link to="/" style={{ color: 'var(--color-mocha)' }}>Home</Link>
+          <Link to="/" style={{ color: 'var(--color-mocha)', whiteSpace: 'nowrap' }}>Home</Link>
           <span>/</span>
-          <Link to="/shop" style={{ color: 'var(--color-mocha)' }}>Shop</Link>
+          <Link to="/shop" style={{ color: 'var(--color-mocha)', whiteSpace: 'nowrap' }}>Shop</Link>
           {product.category && (
             <>
               <span>/</span>
-              <Link to={`/shop?category=${product.category.slug}`} style={{ color: 'var(--color-mocha)' }}>
+              <Link to={`/shop?category=${product.category.slug}`} style={{ color: 'var(--color-mocha)', whiteSpace: 'nowrap' }}>
                 {product.category.name}
               </Link>
             </>
           )}
           <span>/</span>
-          <span style={{ color: 'var(--color-espresso)', fontWeight: '600' }}>{product.name}</span>
+          <span
+            style={{
+              color: 'var(--color-espresso)',
+              fontWeight: '600',
+              wordBreak: 'break-word'
+            }}
+          >
+            {product.name}
+          </span>
         </nav>
 
         {/* Product Details Grid */}
@@ -338,7 +348,7 @@ export const ProductDetailsPage = () => {
             {/* Size Selector */}
             {Array.isArray(product.sizes) && product.sizes.length > 0 && (
               <div style={{ marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.875rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '8px', fontSize: '0.875rem' }}>
                   <span style={{ fontWeight: '600', color: 'var(--color-espresso)' }}>
                     Select Size:
                   </span>
@@ -347,7 +357,7 @@ export const ProductDetailsPage = () => {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {product.sizes.map((sz) => {
                     const isSelected = selectedSize === sz;
                     return (
@@ -359,11 +369,11 @@ export const ProductDetailsPage = () => {
                           setValidationError('');
                         }}
                         style={{
-                          minWidth: '56px',
-                          height: '44px',
-                          padding: '0 14px',
+                          minWidth: '48px',
+                          height: '42px',
+                          padding: '0 10px',
                           borderRadius: 'var(--radius-sm)',
-                          fontSize: '0.9rem',
+                          fontSize: '0.85rem',
                           fontWeight: isSelected ? '700' : '500',
                           backgroundColor: isSelected ? 'var(--color-espresso)' : 'var(--color-white)',
                           color: isSelected ? 'var(--color-cream)' : 'var(--color-espresso)',
@@ -391,28 +401,30 @@ export const ProductDetailsPage = () => {
               <span style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', marginBottom: '8px' }}>
                 Quantity:
               </span>
-              <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-white)' }}>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  style={{ padding: '8px 16px', fontSize: '1.1rem', fontWeight: '700', border: 'none', background: 'none', cursor: 'pointer' }}
-                  disabled={quantity <= 1}
-                >
-                  −
-                </button>
-                <span style={{ minWidth: '40px', textAlign: 'center', fontWeight: '700' }}>{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
-                  style={{ padding: '8px 16px', fontSize: '1.1rem', fontWeight: '700', border: 'none', background: 'none', cursor: 'pointer' }}
-                  disabled={quantity >= availableStock}
-                >
-                  +
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-white)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    style={{ padding: '8px 14px', fontSize: '1.1rem', fontWeight: '700', border: 'none', background: 'none', cursor: 'pointer' }}
+                    disabled={quantity <= 1}
+                  >
+                    −
+                  </button>
+                  <span style={{ minWidth: '36px', textAlign: 'center', fontWeight: '700' }}>{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
+                    style={{ padding: '8px 14px', fontSize: '1.1rem', fontWeight: '700', border: 'none', background: 'none', cursor: 'pointer' }}
+                    disabled={quantity >= availableStock}
+                  >
+                    +
+                  </button>
+                </div>
+                <span style={{ fontSize: '0.8rem', color: '#2E6F40', fontWeight: '600', wordBreak: 'break-word' }}>
+                  ✓ In Stock ({availableStock} units available)
+                </span>
               </div>
-              <span style={{ marginLeft: '12px', fontSize: '0.8rem', color: '#2E6F40', fontWeight: '600' }}>
-                ✓ In Stock ({availableStock} units available)
-              </span>
             </div>
 
             {/* Validation Message */}
@@ -433,15 +445,15 @@ export const ProductDetailsPage = () => {
             )}
 
             {/* Action Buttons: Add to Bag + BOOK NOW */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '2rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} className="buy-buttons-grid">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '2rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }} className="buy-buttons-grid">
                 {/* 1. Add to Bag */}
                 <Button
                   variant="primary"
                   size="lg"
                   onClick={handleAddToBag}
                   icon={<BagIcon size={18} />}
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', fontSize: '0.9rem', padding: '0.75rem 0.6rem', whiteSpace: 'nowrap', justifyContent: 'center' }}
                 >
                   {addedSuccess ? '✓ In Bag' : 'Add to Bag'}
                 </Button>
@@ -451,7 +463,7 @@ export const ProductDetailsPage = () => {
                   variant="caramel"
                   size="lg"
                   onClick={handleOpenBooking}
-                  style={{ width: '100%', fontWeight: '700', letterSpacing: '0.06em' }}
+                  style={{ width: '100%', fontWeight: '700', letterSpacing: '0.04em', fontSize: '0.9rem', padding: '0.75rem 0.6rem', whiteSpace: 'nowrap', justifyContent: 'center' }}
                 >
                   ⚡ Book Now
                 </Button>
@@ -462,7 +474,7 @@ export const ProductDetailsPage = () => {
                 <a
                   href="tel:+918466007454"
                   className="btn btn-outline btn-sm"
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', padding: '0.5rem 0.4rem', whiteSpace: 'nowrap' }}
                 >
                   <PhoneIcon size={14} /> Call Store
                 </a>
@@ -471,7 +483,7 @@ export const ProductDetailsPage = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-caramel btn-sm"
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', padding: '0.5rem 0.4rem', whiteSpace: 'nowrap' }}
                 >
                   <WhatsAppIcon size={14} /> WhatsApp Store
                 </a>

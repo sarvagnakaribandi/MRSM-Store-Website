@@ -267,7 +267,8 @@ export const CheckoutModal = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '1rem'
+        padding: 'clamp(8px, 2.5vw, 16px)',
+        boxSizing: 'border-box'
       }}
     >
       <div
@@ -278,8 +279,10 @@ export const CheckoutModal = ({
           width: '100%',
           maxHeight: '92vh',
           overflowY: 'auto',
+          overflowX: 'hidden',
           boxShadow: 'var(--shadow-lg)',
-          position: 'relative'
+          position: 'relative',
+          boxSizing: 'border-box'
         }}
       >
         {/* Close Button (Hidden on Payment Verifying) */}
@@ -1358,10 +1361,26 @@ export const CheckoutModal = ({
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-caramel btn-lg"
-                style={{ width: '100%', fontWeight: '700', gap: '8px' }}
+                className="btn btn-caramel"
+                style={{
+                  width: '100%',
+                  fontWeight: '700',
+                  gap: '8px',
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word',
+                  textAlign: 'center',
+                  padding: '0.85rem 1rem',
+                  fontSize: '0.9rem',
+                  lineHeight: '1.35',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 'var(--radius-sm)',
+                  boxSizing: 'border-box'
+                }}
               >
-                <WhatsAppIcon size={20} /> Send Order to WhatsApp (Mr. Shiva Yadav)
+                <WhatsAppIcon size={20} style={{ flexShrink: 0 }} />
+                <span>Send Order to WhatsApp (Mr. Shiva Yadav)</span>
               </a>
 
               {/* View in My Orders Button */}
@@ -1373,7 +1392,14 @@ export const CheckoutModal = ({
                   onClose();
                   navigate('/my-orders');
                 }}
-                style={{ fontWeight: '700', backgroundColor: 'var(--color-latte-soft)', color: 'var(--color-espresso)' }}
+                style={{
+                  fontWeight: '700',
+                  backgroundColor: 'var(--color-latte-soft)',
+                  color: 'var(--color-espresso)',
+                  whiteSpace: 'normal',
+                  textAlign: 'center',
+                  padding: '0.85rem 1rem'
+                }}
               >
                 📦 View in My Orders
               </Button>
