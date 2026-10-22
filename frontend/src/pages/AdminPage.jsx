@@ -32,6 +32,7 @@ export const AdminPage = () => {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [orderFilterTab, setOrderFilterTab] = useState('all'); // 'all' | 'active' | 'cancelled'
 
   // Modal States: Add / Edit Product
   const [showProductModal, setShowProductModal] = useState(false);
@@ -234,11 +235,29 @@ export const AdminPage = () => {
 
   // Update order status in orders tab
   const handleUpdateOrderStatus = (orderId, newStatus) => {
-    const updated = orders.map((o) => (o.orderId === orderId ? { ...o, status: newStatus } : o));
+    const updated = orders.map((o) => {
+      if (o.orderId === orderId) {
+        const isNowCancelled = newStatus === 'Cancelled' || newStatus === 'Cancelled by Customer';
+        return {
+          ...o,
+          status: newStatus,
+          isCancelled: isNowCancelled,
+          // If admin restores an order back to active, reset cancellation data so everything is back to normal
+          ...(newStatus !== 'Cancelled' && newStatus !== 'Cancelled by Customer' && o.isCancelled
+            ? {
+                cancellationReason: '',
+                cancellationComment: '',
+                cancelledAt: ''
+              }
+            : {})
+        };
+      }
+      return o;
+    });
     setOrders(updated);
     try {
       localStorage.setItem('mrsm_orders', JSON.stringify(updated));
-      showToast(`✓ Order ${orderId} status set to "${newStatus}"`);
+      showToast(`✓ Order ${orderId} status updated to "${newStatus}"`);
     } catch (e) {
       console.error(e);
     }
@@ -436,7 +455,9 @@ export const AdminPage = () => {
           <div style={{ backgroundColor: 'var(--color-white)', padding: '1.25rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Customer Orders</div>
             <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--color-espresso)', marginTop: '4px' }}>{orders.length}</div>
-            <div style={{ fontSize: '0.75rem', color: '#2E6F40', fontWeight: '600' }}>Booked & Reserved</div>
+            <div style={{ fontSize: '0.75rem', color: '#2E6F40', fontWeight: '600' }}>
+              {orders.filter((o) => !o.isCancelled && o.status !== 'Cancelled' && o.status !== 'Cancelled by Customer').length} Active • <span style={{ color: '#A82828' }}>{orders.filter((o) => o.isCancelled || o.status === 'Cancelled' || o.status === 'Cancelled by Customer').length} Cancelled</span>
+            </div>
           </div>
 
           <div style={{ backgroundColor: 'var(--color-white)', padding: '1.25rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
@@ -669,9 +690,36 @@ export const AdminPage = () => {
             ========================================================================= */}
         {activeTab === 'orders' && (
           <div>
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                 Showing <strong>{orders.length}</strong> customer bookings received through the website.
+              </div>
+
+              {/* Order Status Filter Buttons */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[
+                  { id: 'all', label: `All (${orders.length})` },
+                  { id: 'active', label: `Active (${orders.filter((o) => !o.isCancelled && o.status !== 'Cancelled' && o.status !== 'Cancelled by Customer').length})` },
+                  { id: 'cancelled', label: `❌ Cancelled (${orders.filter((o) => o.isCancelled || o.status === 'Cancelled' || o.status === 'Cancelled by Customer').length})` }
+                ].map((fTab) => (
+                  <button
+                    key={fTab.id}
+                    type="button"
+                    onClick={() => setOrderFilterTab(fTab.id)}
+                    style={{
+                      padding: '5px 12px',
+                      fontSize: '0.8rem',
+                      fontWeight: orderFilterTab === fTab.id ? '700' : '500',
+                      borderRadius: 'var(--radius-xs)',
+                      border: '1px solid var(--border-subtle)',
+                      backgroundColor: orderFilterTab === fTab.id ? 'var(--color-espresso)' : 'var(--color-white)',
+                      color: orderFilterTab === fTab.id ? 'var(--color-cream)' : 'var(--color-espresso)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {fTab.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -685,74 +733,142 @@ export const AdminPage = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {orders.map((ord, idx) => (
-                  <div
-                    key={ord.orderId || idx}
-                    style={{
-                      backgroundColor: 'var(--color-white)',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-subtle)',
-                      padding: '1.25rem 1.5rem',
-                      boxShadow: 'var(--shadow-sm)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px', marginBottom: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <strong style={{ fontSize: '1.05rem', color: 'var(--color-espresso)' }}>{ord.orderId}</strong>
-                        <span style={{ backgroundColor: ord.isPaidOnline ? '#E8F5E9' : '#FFF3CD', color: ord.isPaidOnline ? '#2E6F40' : '#856404', fontSize: '0.75rem', fontWeight: '700', padding: '2px 8px', borderRadius: '3px' }}>
-                          {ord.paymentLabel}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--color-espresso)' }}>
-                        {formatINR(ord.finalAmount)}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', fontSize: '0.85rem' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Customer</div>
-                        <strong>{ord.receiverName}</strong> ({ord.receiverPhone})<br />
-                        <span style={{ color: 'var(--text-secondary)' }}>{ord.fullAddress}</span>
-                      </div>
-
-                      <div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Garment Items</div>
-                        {(ord.items || []).map((it, itIdx) => (
-                          <div key={itIdx}>
-                            • {it.name || it.product?.name} (Size: {it.size}, Qty: {it.quantity || 1})
-                          </div>
-                        ))}
-                      </div>
-
-                      <div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Status Control</div>
-                        <select
-                          className="form-input"
-                          style={{ padding: '6px 10px', fontSize: '0.8rem', marginTop: '4px' }}
-                          value={ord.status || 'Confirmed & Reserved'}
-                          onChange={(e) => handleUpdateOrderStatus(ord.orderId, e.target.value)}
-                        >
-                          <option value="Confirmed & Reserved">✓ Confirmed & Reserved</option>
-                          <option value="Ready for Trial at Showroom">🏬 Ready for Trial at Showroom</option>
-                          <option value="Out for Delivery">🚚 Out for Delivery</option>
-                          <option value="Completed / Collected">🎉 Completed / Collected</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--border-subtle)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                      <a
-                        href={`https://wa.me/91${ord.receiverPhone?.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${ord.receiverName}, this is Mr. Shiva Yadav from MR SM Multi Brand Store regarding your order ${ord.orderId}. Your garment is ready!`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.75rem' }}
+                {orders
+                  .filter((ord) => {
+                    const isCancelled = ord.isCancelled || ord.status === 'Cancelled' || ord.status === 'Cancelled by Customer';
+                    if (orderFilterTab === 'active') return !isCancelled;
+                    if (orderFilterTab === 'cancelled') return isCancelled;
+                    return true;
+                  })
+                  .map((ord, idx) => {
+                    const isOrderCancelled = ord.isCancelled || ord.status === 'Cancelled' || ord.status === 'Cancelled by Customer';
+                    return (
+                      <div
+                        key={ord.orderId || idx}
+                        style={{
+                          backgroundColor: 'var(--color-white)',
+                          borderRadius: 'var(--radius-sm)',
+                          border: isOrderCancelled ? '1.5px solid #F5C6CB' : '1px solid var(--border-subtle)',
+                          padding: '1.25rem 1.5rem',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}
                       >
-                        📱 WhatsApp Customer
-                      </a>
-                    </div>
-                  </div>
-                ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <strong style={{ fontSize: '1.05rem', color: 'var(--color-espresso)' }}>{ord.orderId}</strong>
+                            <span style={{ backgroundColor: ord.isPaidOnline ? '#E8F5E9' : '#FFF3CD', color: ord.isPaidOnline ? '#2E6F40' : '#856404', fontSize: '0.75rem', fontWeight: '700', padding: '2px 8px', borderRadius: '3px' }}>
+                              {ord.paymentLabel}
+                            </span>
+                            {isOrderCancelled ? (
+                              <span style={{ backgroundColor: '#FBEAEA', color: '#A82828', fontSize: '0.75rem', fontWeight: '800', padding: '2px 8px', borderRadius: '3px', border: '1px solid #F5C6CB' }}>
+                                ❌ CANCELLED BY CUSTOMER
+                              </span>
+                            ) : (
+                              <span style={{ backgroundColor: '#E8F5E9', color: '#2E6F40', fontSize: '0.75rem', fontWeight: '700', padding: '2px 8px', borderRadius: '3px' }}>
+                                ✓ ACTIVE
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '1.25rem', fontWeight: '800', color: isOrderCancelled ? '#A82828' : 'var(--color-espresso)' }}>
+                            {formatINR(ord.finalAmount)}
+                          </div>
+                        </div>
+
+                        {/* Order Details Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', fontSize: '0.85rem' }}>
+                          <div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Customer Details</div>
+                            <strong>{ord.receiverName}</strong> ({ord.receiverPhone})<br />
+                            <span style={{ color: 'var(--text-secondary)' }}>{ord.fullAddress}</span>
+                          </div>
+
+                          <div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Garment Items</div>
+                            {(ord.items || []).map((it, itIdx) => (
+                              <div key={itIdx}>
+                                • {it.name || it.product?.name} (Size: {it.size || 'M'}, Qty: {it.quantity || 1})
+                              </div>
+                            ))}
+                          </div>
+
+                          <div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Status Control</div>
+                            <select
+                              className="form-input"
+                              style={{
+                                padding: '6px 10px',
+                                fontSize: '0.8rem',
+                                marginTop: '4px',
+                                borderColor: isOrderCancelled ? '#F5C6CB' : 'var(--border-subtle)',
+                                backgroundColor: isOrderCancelled ? '#FFF8F8' : 'var(--color-white)',
+                                fontWeight: '600'
+                              }}
+                              value={ord.status || (isOrderCancelled ? 'Cancelled by Customer' : 'Confirmed & Reserved')}
+                              onChange={(e) => handleUpdateOrderStatus(ord.orderId, e.target.value)}
+                            >
+                              <option value="Confirmed & Reserved">✓ Confirmed & Reserved (Active)</option>
+                              <option value="Ready for Trial at Showroom">🏬 Ready for Trial at Showroom</option>
+                              <option value="Out for Delivery">🚚 Out for Delivery</option>
+                              <option value="Completed / Collected">🎉 Completed / Collected</option>
+                              <option value="Cancelled by Customer">❌ Cancelled by Customer</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Prominent Cancellation Reason Card in Admin */}
+                        {isOrderCancelled && (
+                          <div
+                            style={{
+                              backgroundColor: '#FFF8F8',
+                              border: '1.5px solid #F5C6CB',
+                              borderRadius: 'var(--radius-xs)',
+                              padding: '12px 16px',
+                              marginTop: '12px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                              <span style={{ color: '#A82828', fontWeight: '800', fontSize: '0.85rem' }}>
+                                ❌ Cancellation Reason & Details
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Cancelled: <strong>{ord.cancelledAt || ord.orderDate}</strong>
+                              </span>
+                            </div>
+
+                            <div style={{ fontSize: '0.875rem', color: 'var(--color-espresso)', marginTop: '6px' }}>
+                              <strong style={{ color: '#A82828' }}>Reason:</strong> {ord.cancellationReason || 'Customer requested cancellation from My Orders'}
+                            </div>
+
+                            {ord.cancellationComment && (
+                              <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '4px', fontStyle: 'italic' }}>
+                                <strong>Customer Remarks:</strong> "{ord.cancellationComment}"
+                              </div>
+                            )}
+
+                            <div style={{ fontSize: '0.75rem', color: '#2E6F40', marginTop: '6px', fontWeight: '600' }}>
+                              💡 Tip: To restore this order back to normal, select "✓ Confirmed & Reserved (Active)" in Status Control above.
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--border-subtle)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                          <a
+                            href={`https://wa.me/91${ord.receiverPhone?.replace(/\D/g, '')}?text=${encodeURIComponent(
+                              isOrderCancelled
+                                ? `Hi ${ord.receiverName}, this is Mr. Shiva Yadav from MR SM Multi Brand Store regarding your cancelled order ${ord.orderId}. We noted your reason: "${ord.cancellationReason}". Please let us know if we can assist you with an alternative garment size or style!`
+                                : `Hi ${ord.receiverName}, this is Mr. Shiva Yadav from MR SM Multi Brand Store regarding your order ${ord.orderId}. Your garment is ready!`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-outline btn-sm"
+                            style={{ fontSize: '0.75rem' }}
+                          >
+                            📱 WhatsApp Customer
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>

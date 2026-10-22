@@ -15,8 +15,36 @@ import {
 export const MyOrdersPage = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'online' | 'cod' | 'pickup'
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'online' | 'cod' | 'pickup' | 'cancelled'
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState(null);
+
+  // Cancel Order Modal States
+  const [cancellingOrder, setCancellingOrder] = useState(null);
+  const [cancelStep, setCancelStep] = useState('prompt'); // 'prompt' (Step 1) | 'reason' (Step 2)
+  const [selectedReason, setSelectedReason] = useState('');
+  const [cancellationComment, setCancellationComment] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Standard E-Commerce Cancellation Reasons (matching reference flow)
+  const CANCELLATION_REASONS = [
+    'Wrong contact number entered',
+    'Ordered by mistake',
+    'Incorrect product size/color/type ordered',
+    'Expected delivery time is too long',
+    'Wrong address selected',
+    'Product price has reduced',
+    'Purchased product from somewhere else',
+    'Product not required anymore',
+    'Incorrect payment method selected',
+    'Other'
+  ];
+
+  // Helper for toast notifications
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 4000);
+  };
 
   // Load orders from localStorage on mount
   useEffect(() => {
@@ -32,11 +60,57 @@ export const MyOrdersPage = () => {
 
   // Filter orders based on active tab
   const filteredOrders = orders.filter((ord) => {
-    if (activeTab === 'online') return ord.isPaidOnline;
-    if (activeTab === 'cod') return !ord.isPaidOnline;
-    if (activeTab === 'pickup') return ord.deliveryMode === 'store_pickup';
+    const isOrderCancelled = ord.isCancelled || ord.status === 'Cancelled';
+    if (activeTab === 'cancelled') return isOrderCancelled;
+    if (activeTab === 'online') return ord.isPaidOnline && !isOrderCancelled;
+    if (activeTab === 'cod') return !ord.isPaidOnline && !isOrderCancelled;
+    if (activeTab === 'pickup') return ord.deliveryMode === 'store_pickup' && !isOrderCancelled;
     return true;
   });
+
+  // Execute Order Cancellation
+  const handleConfirmCancellation = () => {
+    if (!selectedReason) {
+      setCancelError('Please select a reason for cancellation');
+      return;
+    }
+
+    const nowFormatted = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const updated = orders.map((ord) => {
+      if (ord.orderId === cancellingOrder.orderId) {
+        return {
+          ...ord,
+          status: 'Cancelled',
+          isCancelled: true,
+          cancellationReason: selectedReason,
+          cancellationComment: cancellationComment.trim(),
+          cancelledAt: nowFormatted
+        };
+      }
+      return ord;
+    });
+
+    setOrders(updated);
+    try {
+      localStorage.setItem('mrsm_orders', JSON.stringify(updated));
+    } catch (err) {
+      console.error('Failed to update orders in localStorage:', err);
+    }
+
+    showToast(`✓ Order ${cancellingOrder.orderId} cancelled successfully.`);
+    setCancellingOrder(null);
+    setCancelStep('prompt');
+    setSelectedReason('');
+    setCancellationComment('');
+    setCancelError('');
+  };
 
   // Helper to load a rich demo order if no orders exist yet
   const handleLoadSampleOrder = () => {
@@ -71,6 +145,11 @@ export const MyOrdersPage = () => {
       isPaidOnline: true,
       transactionId: `TXN-UPI-${Date.now().toString().slice(-8)}`,
       paymentLabel: 'Online Paid (UPI QR Code Scan)',
+      status: 'Confirmed & Reserved',
+      isCancelled: false,
+      cancellationReason: '',
+      cancellationComment: '',
+      cancelledAt: '',
       orderDate: new Date().toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -162,9 +241,10 @@ export const MyOrdersPage = () => {
           >
             {[
               { id: 'all', label: `All Orders (${orders.length})` },
-              { id: 'online', label: `Paid via UPI (${orders.filter((o) => o.isPaidOnline).length})` },
-              { id: 'cod', label: `Cash on Delivery (${orders.filter((o) => !o.isPaidOnline).length})` },
-              { id: 'pickup', label: `Showroom Pickups (${orders.filter((o) => o.deliveryMode === 'store_pickup').length})` }
+              { id: 'online', label: `Paid via UPI (${orders.filter((o) => o.isPaidOnline && !o.isCancelled && o.status !== 'Cancelled').length})` },
+              { id: 'cod', label: `Cash on Delivery (${orders.filter((o) => !o.isPaidOnline && !o.isCancelled && o.status !== 'Cancelled').length})` },
+              { id: 'pickup', label: `Showroom Pickups (${orders.filter((o) => o.deliveryMode === 'store_pickup' && !o.isCancelled && o.status !== 'Cancelled').length})` },
+              { id: 'cancelled', label: `✕ Cancelled (${orders.filter((o) => o.isCancelled || o.status === 'Cancelled').length})` }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -285,19 +365,36 @@ export const MyOrdersPage = () => {
                       >
                         {order.orderId}
                       </span>
-                      <span
-                        style={{
-                          backgroundColor: '#E8F5E9',
-                          color: '#2E6F40',
-                          fontSize: '0.75rem',
-                          fontWeight: '700',
-                          padding: '2px 8px',
-                          borderRadius: 'var(--radius-xs)',
-                          textTransform: 'uppercase'
-                        }}
-                      >
-                        ✓ Confirmed
-                      </span>
+                      {order.isCancelled || order.status === 'Cancelled' ? (
+                        <span
+                          style={{
+                            backgroundColor: '#FBEAEA',
+                            color: '#A82828',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-xs)',
+                            textTransform: 'uppercase',
+                            border: '1px solid #F5C6CB'
+                          }}
+                        >
+                          ✕ Cancelled
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            backgroundColor: '#E8F5E9',
+                            color: '#2E6F40',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-xs)',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          ✓ Confirmed
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                       Placed on {order.orderDate || 'Recent Order'}
@@ -314,53 +411,145 @@ export const MyOrdersPage = () => {
                   </div>
                 </div>
 
-                {/* Progress Stepper Bar */}
-                <div
-                  style={{
-                    padding: '1.25rem 1.75rem',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    backgroundColor: '#FAF8F5'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
-                    {[
-                      { step: '1', title: 'Order Placed', done: true },
-                      { step: '2', title: 'Reserved at Showroom', done: true },
-                      { step: '3', title: order.deliveryMode === 'store_pickup' ? 'Ready for Trial' : 'Out for Delivery', done: false, active: true },
-                      { step: '4', title: 'Delivered', done: false }
-                    ].map((st, sIdx, arr) => (
-                      <div key={st.step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, flex: 1 }}>
-                        <div
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            backgroundColor: st.done ? '#2E6F40' : st.active ? 'var(--color-caramel)' : '#E0E0E0',
-                            color: '#FFFFFF',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.85rem',
-                            fontWeight: '700',
-                            marginBottom: '6px'
-                          }}
-                        >
-                          {st.done ? '✓' : st.step}
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            fontWeight: st.done || st.active ? '700' : '500',
-                            color: st.done ? '#2E6F40' : st.active ? 'var(--color-espresso)' : 'var(--text-muted)',
-                            textAlign: 'center'
-                          }}
-                        >
-                          {st.title}
+                {/* Cancelled Banner (Screenshot 5) OR Progress Stepper & Cancel Bar (Screenshot 1) */}
+                {order.isCancelled || order.status === 'Cancelled' ? (
+                  <div
+                    style={{
+                      padding: '1.25rem 1.75rem',
+                      backgroundColor: '#FDF7F7',
+                      borderBottom: '1px solid #F5C6CB',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '14px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '8px',
+                        backgroundColor: '#FBEAEA',
+                        border: '1.5px solid #F5C6CB',
+                        color: '#A82828',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.3rem',
+                        fontWeight: '800',
+                        flexShrink: 0
+                      }}
+                    >
+                      ✕
+                    </div>
+                    <div style={{ flexGrow: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: '1.05rem', color: '#A82828' }}>Cancelled</strong>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          As per your request on {order.cancelledAt || order.orderDate}
                         </span>
                       </div>
-                    ))}
+                      {order.cancellationReason && (
+                        <div style={{ marginTop: '6px', fontSize: '0.85rem', color: 'var(--color-espresso)' }}>
+                          <strong>Reason:</strong> {order.cancellationReason}
+                          {order.cancellationComment && (
+                            <span style={{ color: 'var(--text-secondary)' }}> — "{order.cancellationComment}"</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Progress Stepper Bar */}
+                    <div
+                      style={{
+                        padding: '1.25rem 1.75rem',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        backgroundColor: '#FAF8F5'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
+                        {[
+                          { step: '1', title: 'Order Placed', done: true },
+                          { step: '2', title: 'Reserved at Showroom', done: true },
+                          { step: '3', title: order.deliveryMode === 'store_pickup' ? 'Ready for Trial' : 'Out for Delivery', done: false, active: true },
+                          { step: '4', title: 'Delivered', done: false }
+                        ].map((st) => (
+                          <div key={st.step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2, flex: 1 }}>
+                            <div
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                backgroundColor: st.done ? '#2E6F40' : st.active ? 'var(--color-caramel)' : '#E0E0E0',
+                                color: '#FFFFFF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.85rem',
+                                fontWeight: '700',
+                                marginBottom: '6px'
+                              }}
+                            >
+                              {st.done ? '✓' : st.step}
+                            </div>
+                            <span
+                              style={{
+                                fontSize: '0.75rem',
+                                fontWeight: st.done || st.active ? '700' : '500',
+                                color: st.done ? '#2E6F40' : st.active ? 'var(--color-espresso)' : 'var(--text-muted)',
+                                textAlign: 'center'
+                              }}
+                            >
+                              {st.title}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cancellation Available Till Shipping Row (Screenshot 1) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.85rem 1.75rem',
+                        backgroundColor: '#FFFDF9',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        flexWrap: 'wrap',
+                        gap: '10px'
+                      }}
+                    >
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        Cancellation available till shipping!
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancellingOrder(order);
+                          setCancelStep('prompt');
+                          setSelectedReason('');
+                          setCancellationComment('');
+                          setCancelError('');
+                        }}
+                        style={{
+                          padding: '6px 18px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1.5px solid #A82828',
+                          color: '#A82828',
+                          backgroundColor: 'transparent',
+                          fontWeight: '700',
+                          fontSize: '0.825rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        Cancel Order
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 {/* Garments List */}
                 <div style={{ padding: '1.5rem 1.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -506,11 +695,65 @@ export const MyOrdersPage = () => {
                     </Button>
                   </div>
 
-                  <Link to="/shop">
-                    <Button variant="primary" size="sm">
-                      🛍️ Buy Again
-                    </Button>
-                  </Link>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {!order.isCancelled && order.status !== 'Cancelled' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancellingOrder(order);
+                          setCancelStep('prompt');
+                          setSelectedReason('');
+                          setCancellationComment('');
+                          setCancelError('');
+                        }}
+                        style={{
+                          padding: '0.45rem 0.9rem',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid #D32F2F',
+                          color: '#D32F2F',
+                          backgroundColor: 'transparent',
+                          fontWeight: '600',
+                          fontSize: '0.825rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel Order
+                      </button>
+                    )}
+
+                    <Link to="/shop">
+                      <button
+                        type="button"
+                        style={
+                          order.isCancelled || order.status === 'Cancelled'
+                            ? {
+                                padding: '0.65rem 1.75rem',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '2px solid #8E24AA',
+                                backgroundColor: 'transparent',
+                                color: '#8E24AA',
+                                fontWeight: '800',
+                                fontSize: '0.9rem',
+                                letterSpacing: '0.04em',
+                                cursor: 'pointer',
+                                transition: 'all var(--transition-fast)'
+                              }
+                            : {
+                                padding: '0.55rem 1.25rem',
+                                borderRadius: 'var(--radius-sm)',
+                                border: 'none',
+                                backgroundColor: 'var(--color-espresso)',
+                                color: 'var(--color-cream)',
+                                fontWeight: '700',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer'
+                              }
+                        }
+                      >
+                        {order.isCancelled || order.status === 'Cancelled' ? 'BUY AGAIN' : '🛍️ Buy Again'}
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
@@ -678,6 +921,379 @@ export const MyOrdersPage = () => {
                 </Button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            CANCEL ORDER 2-STEP MODAL (Matching Reference Screenshots 2, 3, 4)
+            ========================================================================= */}
+        {cancellingOrder && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 'var(--z-modal)',
+              backgroundColor: 'rgba(0, 0, 0, 0.68)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem'
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'var(--color-white)',
+                borderRadius: 'var(--radius-md)',
+                maxWidth: '480px',
+                width: '100%',
+                maxHeight: '92vh',
+                overflowY: 'auto',
+                padding: '1.75rem',
+                position: 'relative',
+                boxShadow: 'var(--shadow-lg)'
+              }}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setCancellingOrder(null)}
+                aria-label="Close modal"
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  color: 'var(--text-muted)',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <CloseIcon size={22} />
+              </button>
+
+              {/* Header Title with Back button if on Step 2 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  paddingBottom: '12px',
+                  marginBottom: '1.25rem'
+                }}
+              >
+                {cancelStep === 'reason' && (
+                  <button
+                    type="button"
+                    onClick={() => setCancelStep('prompt')}
+                    aria-label="Back to step 1"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '1.25rem',
+                      cursor: 'pointer',
+                      color: 'var(--color-espresso)',
+                      padding: '0 6px 0 0'
+                    }}
+                  >
+                    ←
+                  </button>
+                )}
+                <h3
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '1rem',
+                    fontWeight: '800',
+                    color: 'var(--color-espresso)',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    margin: 0
+                  }}
+                >
+                  CANCEL ORDER
+                </h3>
+              </div>
+
+              {/* STEP 1: Confirmation Prompt (Screenshot 2) */}
+              {cancelStep === 'prompt' && (
+                <div>
+                  <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    <div
+                      style={{
+                        width: '84px',
+                        height: '84px',
+                        margin: '0 auto 1.25rem auto',
+                        borderRadius: '50%',
+                        backgroundColor: '#FFF7EC',
+                        border: '2px solid var(--color-caramel)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '2.5rem'
+                      }}
+                    >
+                      📦
+                    </div>
+                    <h4
+                      style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '1.35rem',
+                        fontWeight: '800',
+                        color: 'var(--color-espresso)',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      Packing your order
+                    </h4>
+                    <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
+                      Do you still want to cancel?
+                    </p>
+                  </div>
+
+                  {/* Order Preview Box */}
+                  <div
+                    style={{
+                      backgroundColor: 'var(--color-cream)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '12px 14px',
+                      margin: '1.25rem 0 1.5rem 0',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: 'var(--color-espresso)' }}>{cancellingOrder.orderId}</strong>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>
+                        {(cancellingOrder.items || []).map((i) => i.name).join(', ')}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: '800', color: 'var(--color-espresso)', fontSize: '1.05rem' }}>
+                      {formatINR(cancellingOrder.finalAmount)}
+                    </div>
+                  </div>
+
+                  {/* Buttons: Keep Order vs Cancel Order */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCancellingOrder(null)}
+                      style={{
+                        padding: '12px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1.5px solid var(--border-strong)',
+                        backgroundColor: 'var(--color-white)',
+                        color: 'var(--color-espresso)',
+                        fontWeight: '700',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Keep Order
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCancelStep('reason')}
+                      style={{
+                        padding: '12px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: 'none',
+                        backgroundColor: '#8E24AA',
+                        color: 'var(--color-white)',
+                        fontWeight: '700',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(142, 36, 170, 0.35)'
+                      }}
+                    >
+                      Cancel Order
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: Reason Selection (Screenshots 3 & 4) */}
+              {cancelStep === 'reason' && (
+                <div>
+                  {/* Garment details mini-card */}
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--color-mocha)', marginBottom: '6px' }}>
+                      Product Details
+                    </div>
+                    {(cancellingOrder.items || []).slice(0, 1).map((item, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '10px 12px',
+                          backgroundColor: 'var(--color-cream)',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border-subtle)'
+                        }}
+                      >
+                        <img
+                          src={item.image || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=300&q=80'}
+                          alt=""
+                          style={{ width: '48px', height: '58px', objectFit: 'cover', borderRadius: '4px' }}
+                        />
+                        <div style={{ flexGrow: 1 }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--color-espresso)' }}>
+                            {item.name}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            Size: {item.size || 'Standard'} • {formatINR(item.price)}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#2E6F40', fontWeight: '700', marginTop: '2px' }}>
+                            ✓ All issue easy returns
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Delivery reassurance banner */}
+                  <div
+                    style={{
+                      backgroundColor: '#FFF9E6',
+                      border: '1px solid #FFE082',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '8px 12px',
+                      fontSize: '0.8rem',
+                      color: '#855800',
+                      fontWeight: '600',
+                      marginBottom: '1.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <span>⚡</span>
+                    <span>95% orders delivered early in Hanamkonda & Warangal showroom region</span>
+                  </div>
+
+                  {/* Reason Options Selection */}
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-espresso)', marginBottom: '8px' }}>
+                      Could you tell us a reason for canceling?
+                    </div>
+
+                    <div
+                      style={{
+                        maxHeight: '210px',
+                        overflowY: 'auto',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--color-white)'
+                      }}
+                    >
+                      {CANCELLATION_REASONS.map((r, i) => {
+                        const isSelected = selectedReason === r;
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => {
+                              setSelectedReason(r);
+                              setCancelError('');
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '10px 14px',
+                              cursor: 'pointer',
+                              borderBottom: i < CANCELLATION_REASONS.length - 1 ? '1px solid #F0EAE1' : 'none',
+                              backgroundColor: isSelected ? 'rgba(142, 36, 170, 0.08)' : 'transparent',
+                              transition: 'background 0.15s'
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="cancellationReasonRadio"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              style={{ accentColor: '#8E24AA', width: '18px', height: '18px', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '0.85rem', color: isSelected ? '#8E24AA' : 'var(--text-primary)', fontWeight: isSelected ? '700' : '500' }}>
+                              {r}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {cancelError && (
+                      <div style={{ color: '#D32F2F', fontSize: '0.8rem', marginTop: '6px', fontWeight: '600' }}>
+                        {cancelError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Optional remarks input */}
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                      Tell us more (optional)
+                    </label>
+                    <textarea
+                      className="form-textarea"
+                      style={{ minHeight: '60px', fontSize: '0.85rem', padding: '8px 10px' }}
+                      value={cancellationComment}
+                      onChange={(e) => setCancellationComment(e.target.value)}
+                      placeholder="Optional feedback for store proprietor Mr. Shiva Yadav..."
+                    />
+                  </div>
+
+                  {/* Final Cancel Order Button */}
+                  <button
+                    type="button"
+                    onClick={handleConfirmCancellation}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: 'none',
+                      backgroundColor: '#8E24AA',
+                      color: 'var(--color-white)',
+                      fontWeight: '800',
+                      fontSize: '0.95rem',
+                      letterSpacing: '0.04em',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(142, 36, 170, 0.35)',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                  >
+                    Cancel Order
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Toast Alert Feedback */}
+        {toastMessage && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              backgroundColor: 'var(--color-espresso)',
+              color: 'var(--color-cream)',
+              padding: '12px 20px',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--shadow-lg)',
+              zIndex: 9999,
+              fontSize: '0.9rem',
+              fontWeight: '600'
+            }}
+          >
+            {toastMessage}
           </div>
         )}
       </div>

@@ -190,6 +190,11 @@ export const CheckoutModal = ({
       isPaidOnline,
       transactionId: txnRef,
       paymentLabel,
+      status: 'Confirmed & Reserved',
+      isCancelled: false,
+      cancellationReason: '',
+      cancellationComment: '',
+      cancelledAt: '',
       orderDate: new Date().toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
