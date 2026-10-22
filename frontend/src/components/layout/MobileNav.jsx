@@ -12,7 +12,7 @@ export const MobileNav = ({ isOpen, onClose }) => {
         inset: 0,
         zIndex: 'var(--z-drawer)',
         display: 'flex',
-        justifyContent: 'flex-end'
+        justifyContent: 'flex-start'
       }}
     >
       {/* Backdrop */}
@@ -27,7 +27,7 @@ export const MobileNav = ({ isOpen, onClose }) => {
         }}
       />
 
-      {/* Drawer */}
+      {/* Drawer (Slides in from Left) */}
       <div
         style={{
           position: 'relative',
@@ -41,7 +41,7 @@ export const MobileNav = ({ isOpen, onClose }) => {
           boxShadow: 'var(--shadow-lg)',
           overflowY: 'auto',
           zIndex: 10,
-          animation: 'slideInFromRight 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          animation: 'slideInFromLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
         {/* Drawer Header */}
@@ -162,9 +162,9 @@ export const MobileNav = ({ isOpen, onClose }) => {
       </div>
 
       <style>{`
-        @keyframes slideInFromRight {
+        @keyframes slideInFromLeft {
           from {
-            transform: translateX(100%);
+            transform: translateX(-100%);
           }
           to {
             transform: translateX(0);

@@ -18,12 +18,13 @@ export const AnnouncementBar = () => {
         gap: '8px'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+      <div className="announcement-left-contacts" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
           <MapPinIcon size={14} /> Subedari, Hanamkonda
         </span>
         <a
           href="tel:+918466007454"
+          className="announcement-desktop-only"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -37,6 +38,7 @@ export const AnnouncementBar = () => {
           href="https://wa.me/918332867454"
           target="_blank"
           rel="noopener noreferrer"
+          className="announcement-desktop-only"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -69,12 +71,18 @@ export const AnnouncementBar = () => {
       </div>
 
       <style>{`
-        @media (max-width: 680px) {
-          .announcement-review-note {
+        @media (max-width: 768px) {
+          .announcement-review-note,
+          .announcement-desktop-only {
             display: none !important;
           }
           .announcement-bar-wrap {
             justify-content: center !important;
+            padding: 5px 12px !important;
+          }
+          .announcement-left-contacts {
+            justify-content: center !important;
+            width: 100% !important;
           }
         }
       `}</style>

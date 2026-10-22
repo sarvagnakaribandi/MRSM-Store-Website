@@ -18,8 +18,12 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
         borderBottom: '1px solid rgba(231, 214, 193, 0.15)'
       }}
     >
+      {/* ======================================================== */}
+      {/* DESKTOP HEADER (Laptops & Desktops: min-width: 1025px)   */}
+      {/* 100% Exact & Untouched                                    */}
+      {/* ======================================================== */}
       <div
-        className="container"
+        className="container desktop-header-bar"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -166,70 +170,146 @@ export const Header = ({ onToggleMobileNav, isMobileNavOpen }) => {
               {totalItems}
             </span>
           </Link>
+        </div>
+      </div>
 
-          {/* Mobile Navigation Toggle Button (Auto-adjusts & stores menu links on mobile) */}
-          <button
-            type="button"
-            onClick={onToggleMobileNav}
-            aria-label="Toggle navigation menu"
-            className="mobile-nav-toggle"
+      {/* ======================================================== */}
+      {/* MOBILE HEADER (Phones & Tablets: max-width: 1024px)       */}
+      {/* Matches Pic 2 & Pic 3 Reference Exactly                   */}
+      {/* Left: 3-line Menu | Center: MR SM Store | Right: Bag      */}
+      {/* ======================================================== */}
+      <div
+        className="container mobile-header-bar"
+        style={{
+          display: 'none',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: '0.65rem',
+          paddingBottom: '0.65rem',
+          position: 'relative'
+        }}
+      >
+        {/* Left: 3-line Hamburger Menu Button (Pic 2 & Pic 3) */}
+        <button
+          type="button"
+          onClick={onToggleMobileNav}
+          aria-label="Toggle navigation menu"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '42px',
+            height: '42px',
+            borderRadius: '8px',
+            border: '1px solid rgba(196, 138, 90, 0.35)',
+            backgroundColor: 'rgba(196, 138, 90, 0.1)',
+            color: 'var(--color-cream)',
+            cursor: 'pointer',
+            padding: 0,
+            flexShrink: 0,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {isMobileNavOpen ? <CloseIcon size={22} /> : <MenuIcon size={22} />}
+        </button>
+
+        {/* Center: Luxury Centered Brand Name (Pic 2 & Pic 3) */}
+        <Link
+          to="/"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            textDecoration: 'none',
+            padding: '0 8px'
+          }}
+        >
+          <span
             style={{
-              display: 'none',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: 'rgba(196, 138, 90, 0.16)',
-              border: '1px solid var(--color-caramel)',
-              padding: '0.45rem 0.75rem',
-              borderRadius: 'var(--radius-sm)',
+              fontFamily: 'var(--font-serif)',
+              fontSize: '1.45rem',
+              fontWeight: '700',
               color: 'var(--color-cream)',
-              cursor: 'pointer',
-              fontSize: '0.825rem',
-              fontWeight: '600',
-              transition: 'all var(--transition-fast)'
+              letterSpacing: '0.08em',
+              lineHeight: 1.1
             }}
           >
-            {isMobileNavOpen ? <CloseIcon size={20} /> : <MenuIcon size={20} />}
-            <span className="menu-btn-text">Menu</span>
-          </button>
-        </div>
+            MR SM
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.62rem',
+              fontWeight: '600',
+              color: 'var(--color-caramel)',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              marginTop: '2px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            MULTI BRAND STORE
+          </span>
+        </Link>
+
+        {/* Right: Shopping Bag Button (Pic 2 & Pic 3) */}
+        <Link
+          to="/bag"
+          aria-label={`Shopping Bag with ${totalItems} items`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            height: '42px',
+            minWidth: '42px',
+            padding: '0 10px',
+            borderRadius: '8px',
+            border: '1px solid rgba(196, 138, 90, 0.35)',
+            backgroundColor: 'rgba(196, 138, 90, 0.1)',
+            color: 'var(--color-cream)',
+            textDecoration: 'none',
+            flexShrink: 0,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <BagIcon size={20} />
+          <span
+            style={{
+              backgroundColor: 'var(--color-caramel)',
+              color: '#FFFFFF',
+              borderRadius: 'var(--radius-full)',
+              padding: '2px 6px',
+              fontSize: '0.725rem',
+              fontWeight: '700',
+              lineHeight: 1
+            }}
+          >
+            {totalItems}
+          </span>
+        </Link>
       </div>
 
       <style>{`
         /* Desktop & Laptop Browsers: Keep exact horizontal top navigation */
         @media (min-width: 1025px) {
-          .desktop-nav {
+          .desktop-header-bar {
             display: flex !important;
           }
-          .mobile-nav-toggle {
+          .mobile-header-bar {
             display: none !important;
           }
         }
 
-        /* Mobile & Tablet Browsers: Store top features inside the Menu icon */
+        /* Mobile & Tablet Browsers: Switch to clean centered brand with left menu */
         @media (max-width: 1024px) {
-          .desktop-nav {
+          .desktop-header-bar {
             display: none !important;
           }
-          .mobile-nav-toggle {
-            display: inline-flex !important;
-          }
-        }
-
-        /* Small Mobile Devices: Compact action buttons for razor-sharp alignment */
-        @media (max-width: 540px) {
-          .orders-label,
-          .bag-label {
-            display: none !important;
-          }
-          .brand-subtitle {
-            font-size: 0.58rem !important;
-            letter-spacing: 0.08em !important;
-          }
-        }
-
-        @media (max-width: 380px) {
-          .menu-btn-text {
-            display: none !important;
+          .mobile-header-bar {
+            display: flex !important;
           }
         }
       `}</style>
